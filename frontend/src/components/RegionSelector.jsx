@@ -10,7 +10,11 @@ export default function RegionSelector({ summary, selectedRegion, onChange }) {
 
   const regions = selectableRegions(summary)
   const options = [
-    { label: 'All regions', value: ALL_REGIONS },
+    {
+      label: 'All regions',
+      value: ALL_REGIONS,
+      hint: `${formatInteger(summary.totals.flagged)} flagged`,
+    },
     ...regions.map((row) => ({
       label: row.region,
       value: row.region,
