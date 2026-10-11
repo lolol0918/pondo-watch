@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  PEER_GROUP_CAVEAT,
   SCREENING_DISCLAIMER,
   SCOPE_NOTE,
   buildExplanation,
@@ -34,6 +35,7 @@ describe('neutral language', () => {
   it('keeps derived copy free of accusatory wording', () => {
     const texts = [
       SCOPE_NOTE,
+      PEER_GROUP_CAVEAT,
       scopeNoteFor(record),
       buildExplanation(record),
       buildHeadline(record),

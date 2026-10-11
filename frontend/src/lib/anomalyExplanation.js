@@ -94,12 +94,25 @@ export function peerGroupLine(record) {
   const sizeText =
     size === null
       ? 'size not available'
-      : `${formatInteger(size)} comparable ${size === 1 ? 'project' : 'projects'}`
+      : `${formatInteger(size)} projects matched on category, region and year`
   const where = [record?.region, record?.infraYear && `(${record.infraYear})`]
     .filter(Boolean)
     .join(' ')
   return `Peer group: ${group}${where ? ` in ${where}` : ''} — ${sizeText}.`
 }
+
+/**
+ * The caveat shown directly under the peer-group line. It exists because a
+ * large group makes the median stable but says nothing about whether the peers
+ * are alike in scope, and readers can otherwise mistake group size for a
+ * guarantee that the comparison is like-for-like. Only states what the
+ * grouping keys are — it never claims or fabricates scope information.
+ */
+export const PEER_GROUP_CAVEAT =
+  'Peers are matched only on category, region and year. A large peer group ' +
+  'makes the median stable, but it does not make the projects alike: the ' +
+  'group can still mix small repairs with large network works. A flag is an ' +
+  'outlier statistic for this group, not a like-for-like cost comparison.'
 
 /**
  * Descriptions that suggest a bundled or program-level scope of work. These
@@ -149,11 +162,8 @@ export function isProgramLevel(record) {
 /** Neutral tag shown on program-level rows (never a verdict). */
 export const PROGRAM_LEVEL_TAG = 'Program-level line: scope unclear'
 
-// A peer group of at least this many comparable projects is treated as
-// "wide": a median drawn from a large group is a stable reference point.
-const WIDE_GROUP_SIZE = 100
-// A MAD (log10) at or above this spread means the group's budgets are so
-// scattered that the median is a less precise benchmark.
+// A MAD (log10) at or above this spread means a peer group's budgets vary
+// enough that the group may mix different scales of work.
 const WIDE_SPREAD_MAD = 0.2
 
 /**
@@ -161,21 +171,16 @@ const WIDE_SPREAD_MAD = 0.2
  * strongest to weakest. Only reasons that actually hold for this record are
  * returned; the caller renders "none found" when the list is empty.
  *
+ * Peer-group size is deliberately not a reason here: many peers make the
+ * median statistically stable, they do not make the peers comparable in
+ * scope. The group-size caveat is stated separately (``PEER_GROUP_CAVEAT``)
+ * so it is never framed as evidence that a flag is probably benign.
+ *
  * @param {object} record - a cost-anomaly record
  * @returns {Array<{title: string, detail: string}>}
  */
 export function explainLegitimacy(record) {
   const reasons = []
-  const groupSize = record?.group_size
-  if (Number.isFinite(groupSize) && groupSize >= WIDE_GROUP_SIZE) {
-    reasons.push({
-      title: 'Wide peer group',
-      detail:
-        `The median is drawn from ${formatInteger(groupSize)} comparable ` +
-        `projects, so it is a stable reference point rather than a lucky ` +
-        `comparison against a handful of projects.`,
-    })
-  }
   if (hasScopeKeywords(record?.description)) {
     reasons.push({
       title: 'Bundled or program scope',
@@ -188,11 +193,12 @@ export function explainLegitimacy(record) {
   const mad = record?.mad_log
   if (Number.isFinite(mad) && mad >= WIDE_SPREAD_MAD) {
     reasons.push({
-      title: 'Peer budgets vary widely',
+      title: 'Peer budgets span a wide range',
       detail:
         `Peer-group budgets are scattered (±${mad.toFixed(3)} on a log10 ` +
-        `scale), so the median is a less precise benchmark — a project can ` +
-        `clear the fence while still being within the group's natural range.`,
+        `scale). That spread is consistent with the group mixing different ` +
+        `scales of work, so the median is a coarse benchmark and the flag is ` +
+        `a relative signal, not a like-for-like comparison.`,
     })
   }
   return reasons
@@ -206,7 +212,9 @@ export function explainLegitimacy(record) {
 export const SCOPE_NOTE =
   'Scope differences — a larger structure, harder site conditions, or a ' +
   'genuinely different scope of work — can legitimately explain an unusually ' +
-  'high multiple. A flag is a reason for further review, not a finding.'
+  'high multiple. Projects are grouped only by category, region and year, so ' +
+  'a peer group can still mix different scales of work. A flag is a reason ' +
+  'for further review, not a finding.'
 
 /**
  * The generic "why this might be legitimate" paragraph for any flagged
@@ -217,7 +225,9 @@ export function scopeNoteFor() {
   return (
     SCOPE_NOTE +
     ' Geographic price differences and commodity or fuel price changes can ' +
-    'likewise push one project far above its regional-year peers.'
+    'likewise push one project above its regional peers. A flag means the ' +
+    'recorded budget is a statistical outlier relative to the selected peer ' +
+    'group; it is a screening signal, not proof that anything is wrong.'
   )
 }
 

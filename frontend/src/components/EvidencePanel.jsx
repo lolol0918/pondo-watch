@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 import {
+  PEER_GROUP_CAVEAT,
+  SCREENING_DISCLAIMER,
   buildHeadline,
   explainLegitimacy,
   peerGroupLine,
@@ -191,6 +193,7 @@ export default function EvidencePanel({ anomaly, onClose }) {
       <section className="evidence-verdict" aria-label="Summary">
         <p className="evidence-sentence">{buildHeadline(anomaly)}</p>
         <p className="evidence-peer-line">{peerGroupLine(anomaly)}</p>
+        <p className="evidence-peer-caveat">{PEER_GROUP_CAVEAT}</p>
       </section>
 
       <section className="evidence-section" aria-label="Comparison">
@@ -218,6 +221,7 @@ export default function EvidencePanel({ anomaly, onClose }) {
         <summary>Why this might be legitimate</summary>
         <div className="evidence-disclosure-body">
           <p className="evidence-generic">{scopeNoteFor(anomaly)}</p>
+          <p className="evidence-disclaimer">{SCREENING_DISCLAIMER}</p>
           {reasons.length > 0 ? (
             <ul className="evidence-reasons">
               {reasons.map((reason) => (
@@ -266,8 +270,8 @@ export default function EvidencePanel({ anomaly, onClose }) {
           </dl>
           <p className="evidence-calc-note">
             The pipeline flags a budget more than 3.0 robust-σ equivalents above
-            its peer-group median, in a peer group of at least 30 comparable
-            projects. The MAD is floored at 0.01 before scoring.
+            its peer-group median, in a peer group of at least 30 projects. The
+            MAD is floored at 0.01 before scoring.
           </p>
         </div>
       </details>

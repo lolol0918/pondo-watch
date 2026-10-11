@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  PEER_GROUP_CAVEAT,
   PROGRAM_LEVEL_TAG,
   SCREENING_DISCLAIMER,
   SCOPE_NOTE,
@@ -105,22 +106,47 @@ describe('hasScopeKeywords', () => {
 })
 
 describe('explainLegitimacy', () => {
-  it('flags a wide peer group, scope keywords and a wide spread', () => {
+  it('flags scope keywords and a wide peer-budget spread', () => {
     const reasons = explainLegitimacy({
       ...record,
-      group_size: 150,
-      description: 'LOCAL PROGRAM: WATER SUPPLY SYSTEM',
-      mad_log: 0.25,
+      group_size: 683,
+      description: 'LOCAL INFRASTRUCTURE PROGRAM (LIP) - NATIONAL ROADS',
+      mad_log: 0.393,
     })
     const titles = reasons.map((r) => r.title)
-    expect(titles).toContain('Wide peer group')
     expect(titles).toContain('Bundled or program scope')
-    expect(titles).toContain('Peer budgets vary widely')
+    expect(titles).toContain('Peer budgets span a wide range')
+  })
+
+  it('never offers a large peer group itself as a legitimacy reason', () => {
+    // A large group makes the median stable but says nothing about scope
+    // comparability, so it must not appear under "why this might be legitimate".
+    const reasons = explainLegitimacy({
+      group_size: 5000,
+      mad_log: 0.01,
+      description: 'ASSET PRESERVATION OF NATIONAL ROADS',
+    })
+    expect(reasons).toEqual([])
   })
 
   it('returns an empty list when no data-driven factor applies', () => {
     expect(explainLegitimacy(record)).toEqual([])
     expect(explainLegitimacy({})).toEqual([])
+  })
+})
+
+describe('PEER_GROUP_CAVEAT', () => {
+  it('states the matching keys and denies a like-for-like guarantee', () => {
+    const text = PEER_GROUP_CAVEAT.toLowerCase()
+    expect(text).toContain('category, region and year')
+    expect(text).toContain('not make the projects alike')
+    expect(text).toContain('outlier statistic')
+  })
+
+  it('does not claim a large group proves comparability', () => {
+    expect(PEER_GROUP_CAVEAT).not.toMatch(
+      /guarantee|proves? comparab|scope is (the )?same/i,
+    )
   })
 })
 
@@ -168,11 +194,14 @@ describe('buildHeadline and peerGroupLine', () => {
     )
   })
 
-  it('names the peer group and its size', () => {
+  it('names the peer group, its size and the matching keys', () => {
     const line = peerGroupLine({ ...record, region: 'Region XI', infraYear: '2021' })
     expect(line).toContain('Bridges')
     expect(line).toContain('Region XI')
-    expect(line).toContain('68 comparable projects')
+    expect(line).toContain('68 projects matched on category, region and year')
+    // "comparable" would imply the peers are alike in scope; the line only
+    // reports what the grouping keys actually guarantee.
+    expect(line).not.toContain('comparable')
   })
 
   it('never prints undefined for missing fields', () => {

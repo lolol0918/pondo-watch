@@ -966,6 +966,15 @@ summary:focus-visible,
   font-size: 0.82rem;
 }
 
+.evidence-peer-caveat {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .evidence-section {
   margin-bottom: 14px;
 }
@@ -1074,6 +1083,16 @@ summary:focus-visible,
 .evidence-generic {
   margin: 0 0 8px;
   font-size: 0.88rem;
+}
+
+.evidence-disclaimer {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  border-left: 3px solid var(--amber-border);
+  background: var(--amber-bg);
+  border-radius: 6px;
+  padding: 8px 10px;
 }
 
 .evidence-reasons {
