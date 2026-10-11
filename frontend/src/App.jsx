@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import {
-  loadAnomalies,
-  loadRegionSummary,
-} from './api/dataSource.js'
+import { loadAnomalies, loadRegionSummary } from './api/dataSource.js'
+import AboutMap from './components/AboutMap.jsx'
 import Disclaimer from './components/Disclaimer.jsx'
 import EvidencePanel from './components/EvidencePanel.jsx'
+import FilterToolbar from './components/FilterToolbar.jsx'
 import FlaggedProjectList from './components/FlaggedProjectList.jsx'
-import AboutMap from './components/AboutMap.jsx'
-import MarkerCoordinateStatus from './components/MarkerCoordinateStatus.jsx'
+import KpiLine from './components/KpiLine.jsx'
 import RegionMap from './components/RegionMap.jsx'
-import RegionSelector, { ALL_REGIONS } from './components/RegionSelector.jsx'
-import SummaryCards from './components/SummaryCards.jsx'
-import { withCoordinates } from './lib/markers.js'
+import { isProgramLevel } from './lib/anomalyExplanation.js'
+import { countCoordinateCoverage, withCoordinates } from './lib/markers.js'
+import {
+  ALL_REGIONS,
+  countActiveFilters,
+  filterFlagged,
+  relaxFiltersFor,
+  sortFlagged,
+} from './lib/listFilters.js'
 import { readUrlState, useUrlPopState, useUrlSync } from './lib/urlState.js'
 
 export default function App() {
@@ -23,7 +27,9 @@ export default function App() {
   const [reloadKey, setReloadKey] = useState(0)
   const [selectedRegion, setSelectedRegion] = useState(initialUrl.region) // null = all
   const [selected, setSelected] = useState(null) // anomaly record
+  const [selectionSource, setSelectionSource] = useState('none') // 'map' | 'list' | 'none'
   const [pendingProjectId, setPendingProjectId] = useState(initialUrl.project)
+  const [showProgramLevel, setShowProgramLevel] = useState(initialUrl.showProgramLevel)
   const [filters, setFilters] = useState({
     sort: initialUrl.sort,
     query: initialUrl.query,
@@ -61,7 +67,10 @@ export default function App() {
 
   const retry = () => setReloadKey((key) => key + 1)
 
-  // Restore a project from the URL once the list has loaded.
+  // Restore a project from the URL once the list has loaded. The region (if
+  // any) is already applied from the URL and is never overridden here — a
+  // selected project that sits outside the filters shows the inline notice
+  // instead.
   useEffect(() => {
     if (!anomalies || !pendingProjectId) {
       return
@@ -69,12 +78,47 @@ export default function App() {
     const record = anomalies.find((a) => a.contractId === pendingProjectId)
     if (record) {
       setSelected(record)
-      if (record.region) {
-        setSelectedRegion(record.region)
-      }
+      setSelectionSource('none')
     }
     setPendingProjectId(null)
   }, [anomalies, pendingProjectId])
+
+  // --- The ONE filtered + sorted selection behind list, map and counts ---
+  const filtered = useMemo(
+    () =>
+      filterFlagged(anomalies, {
+        region: selectedRegion,
+        ...filters,
+        hideProgramLevel: !showProgramLevel,
+      }),
+    [anomalies, selectedRegion, filters, showProgramLevel],
+  )
+  const rows = useMemo(() => sortFlagged(filtered, filters.sort), [filtered, filters.sort])
+
+  // Flagged projects in the current REGION only — the denominator in the
+  // "N of M flagged match" result line.
+  const regionTotal = useMemo(
+    () => filterFlagged(anomalies, { region: selectedRegion }).length,
+    [anomalies, selectedRegion],
+  )
+
+  // Markers are the same filtered set, minus records with no coordinates —
+  // so marker count and list count are always reconciled by the map chip.
+  const markers = useMemo(() => withCoordinates(rows, null), [rows])
+  const coverage = useMemo(() => countCoordinateCoverage(rows), [rows])
+
+  const activeFilterCount = countActiveFilters({
+    ...filters,
+    region: selectedRegion,
+    showProgramLevel,
+  })
+
+  const selectedOutside = useMemo(
+    () =>
+      Boolean(selected) &&
+      !rows.some((a) => a.contractId === selected.contractId),
+    [selected, rows],
+  )
 
   // Keep the address bar in step with the dashboard, and re-apply state on
   // back/forward navigation.
@@ -86,10 +130,12 @@ export default function App() {
     year: filters.year,
     minRatio: filters.minRatio,
     sort: filters.sort,
+    showProgramLevel,
   })
 
   useUrlPopState((url) => {
     setSelectedRegion(url.region)
+    setShowProgramLevel(url.showProgramLevel)
     setFilters({
       sort: url.sort,
       query: url.query,
@@ -106,16 +152,13 @@ export default function App() {
 
   const handleSelectRegion = (label) => {
     setSelectedRegion(label === ALL_REGIONS ? null : label)
-    setSelected(null)
   }
 
-  const handleSelectProject = (anomaly) => {
+  // Selecting a project never rewrites the filters or reorders the list; the
+  // list shows an inline notice with an explicit "Add to filters" instead.
+  const handleSelectProject = (anomaly, source = 'list') => {
     setSelected(anomaly)
-    // Focus the list on the project's region, unless it is already focused.
-    const isAll = !selectedRegion || selectedRegion === ALL_REGIONS
-    if (anomaly.region && (isAll || anomaly.region !== selectedRegion)) {
-      setSelectedRegion(anomaly.region)
-    }
+    setSelectionSource(source)
   }
 
   const handleResetView = () => {
@@ -123,96 +166,127 @@ export default function App() {
     setSelectedRegion(null)
   }
 
-  // The dots drawn on the map: valid-coordinate flagged projects, scoped to
-  // the selected region (or all of them when no region is chosen).
-  const markers = useMemo(
-    () => withCoordinates(anomalies, selectedRegion || null),
-    [anomalies, selectedRegion],
-  )
+  const handleClearFilters = () => {
+    setSelectedRegion(null)
+    setShowProgramLevel(false)
+    setFilters({
+      sort: filters.sort,
+      query: '',
+      category: '',
+      year: '',
+      minRatio: '',
+    })
+  }
+
+  const handleAddToFilters = () => {
+    if (!selected) {
+      return
+    }
+    const { region: regionChange, filters: filterChange } = relaxFiltersFor(
+      selected,
+      { region: selectedRegion, ...filters },
+    )
+    if (regionChange) {
+      setSelectedRegion(regionChange === ALL_REGIONS ? null : regionChange)
+    }
+    if (Object.keys(filterChange).length > 0) {
+      setFilters((current) => ({ ...current, ...filterChange }))
+    }
+    if (isProgramLevel(selected) && !showProgramLevel) {
+      setShowProgramLevel(true)
+    }
+  }
+
+  const validSummary = summary && !summary.error ? summary : null
 
   return (
     <div className="app">
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
+
       <header className="app-header">
         <div className="app-title-block">
           <h1>Pondo Watch</h1>
           <p className="app-subtitle">
-            Screening dashboard for public-infrastructure project budgets
+            Each flag is a statistical outlier worth reviewing, not a finding.
           </p>
         </div>
         <Disclaimer />
       </header>
 
       <main className="app-main" id="main-content" tabIndex={-1}>
-        <SummaryCards summary={!summary?.error ? summary : null} />
+        <KpiLine summary={validSummary} />
 
-        <div className="dashboard">
-          <section className="map-pane">
-            <MarkerCoordinateStatus
+        <FilterToolbar
+          summary={validSummary}
+          anomalies={anomalies}
+          selectedRegion={selectedRegion}
+          onRegionChange={handleSelectRegion}
+          filters={filters}
+          onFiltersChange={setFilters}
+          resultCount={rows.length}
+          regionTotal={regionTotal}
+          activeFilterCount={activeFilterCount}
+          showProgramLevel={showProgramLevel}
+          onShowProgramLevelChange={setShowProgramLevel}
+          onClear={handleClearFilters}
+        />
+
+        {summary?.error ? (
+          <div className="load-error" role="alert">
+            <p>Region summary failed to load.</p>
+            <p className="load-error-hint">
+              Run <code>npm run dev</code> from frontend/ so the copy script
+              runs, then try again.
+            </p>
+            <button type="button" className="retry" onClick={retry}>
+              Try again
+            </button>
+          </div>
+        ) : null}
+
+        {anomaliesError ? (
+          <div className="load-error" role="alert">
+            <p>Flagged projects failed to load.</p>
+            <button type="button" className="retry" onClick={retry}>
+              Try again
+            </button>
+          </div>
+        ) : null}
+
+        <div className="workspace">
+          <section className="pane pane-list" aria-label="Flagged projects">
+            <FlaggedProjectList
               anomalies={anomalies}
-              markers={markers}
+              rows={rows}
               selectedRegion={selectedRegion}
+              selectedContractId={selected?.contractId ?? null}
+              selectedOutside={selectedOutside}
+              onAddToFilters={() => selected && handleAddToFilters(selected)}
+              onSelectProject={handleSelectProject}
             />
-            <RegionSelector
-              summary={!summary?.error ? summary : null}
-              selectedRegion={selectedRegion}
-              onChange={handleSelectRegion}
-            />
-            <div className="map-sticky">
-              <RegionMap
-                summary={!summary?.error ? summary : null}
-                selectedRegion={selectedRegion}
-                onSelectRegion={handleSelectRegion}
-                markers={markers}
-                selected={selected}
-                onSelectProject={handleSelectProject}
-                onReset={handleResetView}
-              />
-              <AboutMap summary={!summary?.error ? summary : null} />
-            </div>
           </section>
 
-        <section className="results-pane">
-          {summary?.error ? (
-            <div className="load-error" role="alert">
-              <p>Region summary failed to load.</p>
-              <p className="load-error-hint">
-                If you are running this locally, generate the data with{' '}
-                <code>.venv/bin/python -m pipeline.export_json</code> from the
-                repository root.
-              </p>
-              <button type="button" className="retry" onClick={retry}>
-                Try again
-              </button>
-            </div>
-          ) : (
-            <>
-              <FlaggedProjectList
-                anomalies={anomalies}
-                selectedRegion={selectedRegion}
-                filters={filters}
-                onFiltersChange={setFilters}
-                onChangeRegion={handleSelectRegion}
-                selectedContractId={selected?.contractId ?? null}
-                onSelectProject={handleSelectProject}
-              />
-              <EvidencePanel
-                anomaly={selected}
-                onClose={() => setSelected(null)}
-              />
-            </>
-          )}
-          {anomaliesError ? (
-            <div className="load-error" role="alert">
-              <p>Flagged projects failed to load.</p>
-              <button type="button" className="retry" onClick={retry}>
-                Try again
-              </button>
-            </div>
-          ) : null}
-        </section>
+          <section className="pane pane-map" aria-label="Map">
+            <RegionMap
+              summary={validSummary}
+              selectedRegion={selectedRegion}
+              onSelectRegion={handleSelectRegion}
+              markers={markers}
+              mappedCount={coverage.valid}
+              withoutCount={coverage.without}
+              selected={selected}
+              selectionSource={selectionSource}
+              onSelectProject={handleSelectProject}
+              onReset={handleResetView}
+            />
+            <AboutMap summary={validSummary} />
+          </section>
+
+          <section className="pane pane-evidence" aria-label="Evidence">
+            <EvidencePanel anomaly={selected} onClose={() => setSelected(null)} />
+          </section>
         </div>
       </main>
 

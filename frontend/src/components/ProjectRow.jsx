@@ -1,29 +1,25 @@
 import { memo } from 'react'
 
-import { hasScopeKeywords } from '../lib/anomalyExplanation.js'
-import {
-  formatMultiple,
-  formatPesoCompact,
-  formatZScore,
-} from '../lib/format.js'
+import { PROGRAM_LEVEL_TAG, isProgramLevel } from '../lib/anomalyExplanation.js'
+import { formatMultiple, formatPesoCompact } from '../lib/format.js'
 
 const SCOPE_BADGE_TITLE =
-  'Description suggests a program, package, cluster or "various" scope of ' +
-  'work, which can legitimately carry a much larger budget than a single ' +
-  'comparable project.'
+  'The description names a program, package, cluster or "various" scope, or ' +
+  'the project was compared against a peer group spanning several categories. ' +
+  'Its budget may legitimately cover more than one project.'
 
 /**
- * One row in the flagged-projects list. Height is kept uniform (the
- * virtualizer relies on it): the badge strip reserves its space even when no
- * badge is shown, and the title is clamped to two lines.
+ * One row in the flagged-projects list: a two-line title clamp, one meta line
+ * (contract ID, category, year) and, on the right, the ratio to the peer
+ * median with the recorded budget beneath it. The tag strip is always present
+ * so every row is the same height for the virtualizer.
  */
-function ProjectRow({ anomaly, selected, active, pinned, onSelect, style, id }) {
-  const scope = hasScopeKeywords(anomaly.description)
+function ProjectRow({ anomaly, selected, active, onSelect, style, id }) {
+  const programLevel = isProgramLevel(anomaly)
   const rowClass = [
     'flagged-item',
     selected ? 'flagged-item-selected' : '',
     active ? 'flagged-item-active' : '',
-    pinned ? 'flagged-item-pinned' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -35,40 +31,33 @@ function ProjectRow({ anomaly, selected, active, pinned, onSelect, style, id }) 
       aria-selected={selected}
       aria-label={`${anomaly.description} — ${anomaly.contractId}`}
       className={rowClass}
-      onClick={() => onSelect(anomaly)}
       style={style}
       id={id}
+      onClick={() => onSelect(anomaly)}
     >
-      <span className="flagged-item-badges" aria-hidden={!scope}>
-        {scope ? (
-          <span className="scope-badge" title={SCOPE_BADGE_TITLE}>
-            program/package scope
-          </span>
-        ) : null}
+      <span className="flagged-item-main">
+        <span className="flagged-item-title">
+          {anomaly.description || 'Untitled project'}
+        </span>
+        <span className="flagged-item-meta">
+          {anomaly.contractId ?? 'not available'}
+          {' · '}
+          {anomaly.category ?? 'not available'}
+          {' · '}
+          {anomaly.infraYear ?? 'not available'}
+        </span>
+        <span className="flagged-item-tags">
+          {programLevel ? (
+            <span className="scope-badge" title={SCOPE_BADGE_TITLE}>
+              {PROGRAM_LEVEL_TAG}
+            </span>
+          ) : null}
+        </span>
       </span>
-      <span className="flagged-item-title">{anomaly.description}</span>
-      <span className="flagged-item-meta">
-        {anomaly.contractId} · {anomaly.category ?? 'not available'} ·{' '}
-        {anomaly.region} · {anomaly.infraYear}
-      </span>
-      <span className="flagged-item-stats">
-        <span className="flagged-item-stat">
-          <span className="stat-label">budget</span>
-          <span className="flagged-item-budget">{formatPesoCompact(anomaly.budget)}</span>
-        </span>
-        <span className="flagged-item-stat">
-          <span className="stat-label">vs. peer median</span>
-          <span className="flagged-item-multiple">
-            {formatMultiple(anomaly.median_multiple)}
-          </span>
-        </span>
-        <span
-          className="flagged-item-stat"
-          title="Modified z-score: how far above the peer-group median this budget sits, in robust σ-equivalents."
-        >
-          <span className="stat-label">modified z</span>
-          <span className="flagged-item-score">{formatZScore(anomaly.anomaly_score)}</span>
-        </span>
+
+      <span className="flagged-item-ratio">
+        <span className="ratio-value">{formatMultiple(anomaly.median_multiple)}</span>
+        <span className="ratio-budget">{formatPesoCompact(anomaly.budget)}</span>
       </span>
     </button>
   )
