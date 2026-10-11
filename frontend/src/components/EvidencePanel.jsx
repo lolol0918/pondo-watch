@@ -1,30 +1,39 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
-  buildEvidenceSummary,
+  buildHeadline,
   explainLegitimacy,
+  peerGroupLine,
   scopeNoteFor,
 } from '../lib/anomalyExplanation.js'
 import {
   formatInteger,
-  formatMultiple,
   formatPeso,
   formatPesoCompact,
   formatZScore,
 } from '../lib/format.js'
 import { isValidCoordinate } from '../lib/markers.js'
 import { peerVisualModel } from '../lib/peerVisual.js'
+import { useMediaQuery } from '../lib/useMediaQuery.js'
 
 const SCREENING_HINT =
   'A statistical flag is a starting point for review, never a verdict.'
 
+// Only what the export actually carries — the data has no project URL, so the
+// portal action is shown as unavailable rather than inventing a URL pattern.
+const PORTAL_NOTE =
+  'Not available — the dataset has no project URL to link to.'
+
 /**
- * The centerpiece: one project's evidence, built only from fields the export
- * actually carries. Missing fields render as "not available" — nothing is
- * invented in the header, sentence, or calculation block.
+ * The evidence panel: label, title, ID chip, meta, a headline box, the peer
+ * comparison chart, then collapsible sections. Built only from exported
+ * fields; missing values render as "not available".
  */
 export default function EvidencePanel({ anomaly, onClose }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState('')
+  const panelRef = useRef(null)
+  const restoreRef = useRef(null)
+  const isSheet = useMediaQuery('(max-width: 1099px)')
 
   // Esc closes the panel (deselects / dismisses the mobile sheet).
   useEffect(() => {
@@ -40,9 +49,51 @@ export default function EvidencePanel({ anomaly, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [anomaly, onClose])
 
-  // Reset the copy feedback whenever a different project is shown.
+  // Mobile bottom sheet: trap focus inside the panel and return it on close.
   useEffect(() => {
-    setCopied(false)
+    if (!anomaly || !isSheet) {
+      return undefined
+    }
+    restoreRef.current = document.activeElement
+    const node = panelRef.current
+    const focusables = () =>
+      Array.from(
+        node?.querySelectorAll(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      )
+    focusables()[0]?.focus()
+
+    const onKeyDown = (event) => {
+      if (event.key !== 'Tab') {
+        return
+      }
+      const items = focusables()
+      if (items.length === 0) {
+        return
+      }
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    node?.addEventListener('keydown', onKeyDown)
+    return () => {
+      node?.removeEventListener('keydown', onKeyDown)
+      if (restoreRef.current instanceof HTMLElement) {
+        restoreRef.current.focus()
+      }
+    }
+  }, [anomaly, isSheet])
+
+  // Reset copy feedback whenever a different project is shown.
+  useEffect(() => {
+    setCopied('')
   }, [anomaly?.contractId])
 
   if (!anomaly) {
@@ -51,7 +102,7 @@ export default function EvidencePanel({ anomaly, onClose }) {
         <div className="evidence-empty">
           <p className="evidence-empty-title">No project selected</p>
           <p>
-            Click a marker on the map or a row in the flagged list to see its
+            Select a marker on the map or a row in the list to see its
             plain-English explanation and the calculation behind the flag.
           </p>
         </div>
@@ -62,20 +113,15 @@ export default function EvidencePanel({ anomaly, onClose }) {
   const reasons = explainLegitimacy(anomaly)
   const visual = peerVisualModel(anomaly)
   const hasCoords = isValidCoordinate(anomaly.latitude, anomaly.longitude)
-  const groupLabel =
-    anomaly.componentCategories && anomaly.componentCategories !== anomaly.category
-      ? `${anomaly.componentCategories} (component category)`
-      : anomaly.category
 
-  const copyId = async () => {
-    const id = anomaly.contractId
+  const copyText = async (kind, text) => {
     try {
-      await navigator.clipboard.writeText(id)
+      await navigator.clipboard.writeText(text)
     } catch {
-      // Clipboard API is unavailable (e.g. non-secure context): fall back to
-      // a temporary textarea so the copy button still works.
+      // Clipboard API unavailable (non-secure context): fall back to a
+      // temporary textarea so the copy actions still work.
       const ta = document.createElement('textarea')
-      ta.value = id
+      ta.value = text
       ta.style.position = 'fixed'
       ta.style.opacity = '0'
       document.body.appendChild(ta)
@@ -83,136 +129,181 @@ export default function EvidencePanel({ anomaly, onClose }) {
       document.execCommand('copy')
       document.body.removeChild(ta)
     }
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
+    setCopied(kind)
+    window.setTimeout(() => setCopied(''), 1600)
   }
+
+  const summaryText = [
+    `${anomaly.description || 'Untitled project'} (${anomaly.contractId ?? 'no ID'})`,
+    `${anomaly.region ?? 'not available'} · ${anomaly.infraYear ?? 'not available'}`,
+    buildHeadline(anomaly),
+    peerGroupLine(anomaly),
+    `Peer median: ${formatPeso(anomaly.median_budget)}`,
+    `Modified z-score: ${formatZScore(anomaly.anomaly_score)}`,
+    `Flag threshold (robust fence): ${formatPeso(anomaly.fence_budget)}`,
+    SCREENING_HINT,
+  ].join('\n')
 
   return (
     <aside
       className="evidence"
-      role="dialog"
-      aria-modal="false"
+      ref={panelRef}
+      role={isSheet ? 'dialog' : 'region'}
+      aria-modal={isSheet ? 'true' : undefined}
       aria-label={`Evidence for contract ${anomaly.contractId}`}
+      tabIndex={-1}
     >
       <div className="evidence-head">
-        <button type="button" className="evidence-back" onClick={onClose}>
-          ← Back to flagged list
+        <span className="evidence-kicker">Selected project</span>
+        <button
+          type="button"
+          className="evidence-close"
+          onClick={onClose}
+          aria-label="Close evidence panel"
+        >
+          Close
         </button>
-        <h2 className="evidence-kicker">Why this project was flagged</h2>
       </div>
 
-      <h3 className="evidence-title">{anomaly.description || 'Untitled project'}</h3>
+      <h3 className="evidence-title">
+        {anomaly.description || 'Untitled project'}
+      </h3>
 
       <div className="evidence-id-row">
-        <span className="evidence-id-label">Contract</span>
+        <span className="evidence-id-label">ID</span>
         <code className="evidence-id">{anomaly.contractId ?? 'not available'}</code>
         <button
           type="button"
           className="copy-button"
-          onClick={copyId}
+          onClick={() => copyText('id', anomaly.contractId ?? '')}
           aria-live="polite"
         >
-          {copied ? 'Copied' : 'Copy ID'}
+          {copied === 'id' ? 'Copied' : 'Copy ID'}
         </button>
       </div>
 
       <p className="evidence-meta">
-        {[
-          anomaly.region,
-          anomaly.category,
-          anomaly.infraYear,
-        ].map((part) => part ?? 'not available').join(' · ')}
+        {[anomaly.region, anomaly.category, anomaly.infraYear]
+          .map((part) => part ?? 'not available')
+          .join(' · ')}
       </p>
 
       <section className="evidence-verdict" aria-label="Summary">
-        <p className="evidence-sentence">{buildEvidenceSummary(anomaly)}</p>
-        <span className="evidence-ratio" aria-label="ratio to peer median">
-          {formatMultiple(anomaly.median_multiple)} peer median
-        </span>
-      </section>
-
-      <section className="evidence-section" aria-label="Calculation">
-        <h4>How this was calculated</h4>
-        <p className="evidence-peer-line">
-          Compared with{' '}
-          {groupLabel && groupLabel !== 'not available'
-            ? groupLabel
-            : 'similar projects'}{' '}
-          in {anomaly.region} ({anomaly.infraYear}), a peer group of{' '}
-          {formatInteger(anomaly.group_size)} projects.
-        </p>
-        <dl className="evidence-grid">
-          <div className="evidence-row">
-            <dt>Median budget</dt>
-            <dd>{formatPeso(anomaly.median_budget)}</dd>
-          </div>
-          <div className="evidence-row">
-            <dt>Spread (MAD, log10)</dt>
-            <dd>{madValue(anomaly.mad_log)}</dd>
-          </div>
-          <div className="evidence-row">
-            <dt>Modified z-score</dt>
-            <dd>{formatZScore(anomaly.anomaly_score)}</dd>
-          </div>
-          <div className="evidence-row">
-            <dt>Flag threshold (robust fence)</dt>
-            <dd>{formatPeso(anomaly.fence_budget)}</dd>
-          </div>
-        </dl>
+        <p className="evidence-sentence">{buildHeadline(anomaly)}</p>
+        <p className="evidence-peer-line">{peerGroupLine(anomaly)}</p>
       </section>
 
       <section className="evidence-section" aria-label="Comparison">
-        <h4>Compare with its peer group</h4>
+        <h4>How this compares</h4>
         {visual ? (
           <>
-            <PeerBandChart model={visual} budgetLabel={formatPesoCompact(anomaly.budget)} />
+            <PeerBandChart
+              model={visual}
+              budgetLabel={formatPesoCompact(anomaly.budget)}
+            />
             <p className="evidence-visual-caption">
-              The gray band shows the range where typical peer budgets fall
-              (median ± 1.5× MAD, log scale). The dashed line is the flag
-              threshold; the dot is this project&apos;s recorded budget.
+              The grey band is where typical peer budgets fall (median ± 1.5×
+              MAD, log scale). The dashed line is the flag threshold; the dot is
+              this project&apos;s recorded budget.
             </p>
           </>
         ) : (
           <p className="evidence-not-available">
-            Comparison visual not available — budget or peer median missing.
+            Comparison not available — budget or peer median is missing.
           </p>
         )}
       </section>
 
-      <section className="evidence-section" aria-label="Legitimate reasons">
-        <h4>Why this might be legitimate</h4>
-        <p className="evidence-generic">{scopeNoteFor(anomaly)}</p>
-        {reasons.length > 0 ? (
-          <ul className="evidence-reasons">
-            {reasons.map((reason) => (
-              <li key={reason.title}>
-                <strong>{reason.title}:</strong> {reason.detail}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="evidence-reasons-none">
-            No data-driven factors found in this record; the project is worth
-            reviewing against its documents.
+      <details className="evidence-disclosure" open>
+        <summary>Why this might be legitimate</summary>
+        <div className="evidence-disclosure-body">
+          <p className="evidence-generic">{scopeNoteFor(anomaly)}</p>
+          {reasons.length > 0 ? (
+            <ul className="evidence-reasons">
+              {reasons.map((reason) => (
+                <li key={reason.title}>
+                  <strong>{reason.title}:</strong> {reason.detail}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="evidence-reasons-none">
+              No data-driven factors found in this record; it is worth reviewing
+              against its documents.
+            </p>
+          )}
+        </div>
+      </details>
+
+      <details className="evidence-disclosure">
+        <summary>Show the math</summary>
+        <div className="evidence-disclosure-body">
+          <dl className="evidence-grid">
+            <div className="evidence-row">
+              <dt>Peer median budget</dt>
+              <dd>{formatPeso(anomaly.median_budget)}</dd>
+            </div>
+            <div className="evidence-row">
+              <dt>Spread (MAD, log10)</dt>
+              <dd>{madValue(anomaly.mad_log)}</dd>
+            </div>
+            <div className="evidence-row">
+              <dt>Modified z-score</dt>
+              <dd>{formatZScore(anomaly.anomaly_score)}</dd>
+            </div>
+            <div className="evidence-row">
+              <dt>Flag threshold (robust fence)</dt>
+              <dd>{formatPeso(anomaly.fence_budget)}</dd>
+            </div>
+            <div className="evidence-row">
+              <dt>Peer group size</dt>
+              <dd>
+                {Number.isFinite(anomaly.group_size)
+                  ? formatInteger(anomaly.group_size)
+                  : 'not available'}
+              </dd>
+            </div>
+          </dl>
+          <p className="evidence-calc-note">
+            The pipeline flags a budget more than 3.0 robust-σ equivalents above
+            its peer-group median, in a peer group of at least 30 comparable
+            projects. The MAD is floored at 0.01 before scoring.
           </p>
-        )}
-      </section>
+        </div>
+      </details>
 
       <section className="evidence-section evidence-source" aria-label="Source">
         <h4>Source</h4>
-        <p>Data: DPWH annual infrastructure program, processed by the Pondo Watch pipeline.</p>
-        <p className="evidence-calc-note">
-          The pipeline flags a budget more than 3.0 robust-σ equivalents above
-          its peer-group median, in a peer group of at least 30 comparable
-          projects. The MAD is floored at 0.01 before scoring.
+        <p>
+          Data: DPWH annual infrastructure program, processed by the Pondo Watch
+          pipeline.
         </p>
         {!hasCoords ? (
           <p className="evidence-coords-note">
-            <strong>No coordinates available</strong> — this project is not
-            drawn on the map.
+            <strong>No coordinates available</strong> — this project is not drawn
+            on the map.
           </p>
         ) : null}
       </section>
+
+      <div className="evidence-actions">
+        <button
+          type="button"
+          className="evidence-action"
+          onClick={() => copyText('summary', summaryText)}
+        >
+          {copied === 'summary' ? 'Copied summary' : 'Copy summary'}
+        </button>
+        <button
+          type="button"
+          className="evidence-action"
+          disabled
+          title={PORTAL_NOTE}
+        >
+          Find on DPWH portal
+        </button>
+      </div>
+      <p className="evidence-portal-note">{PORTAL_NOTE}</p>
 
       <p className="evidence-hint">{SCREENING_HINT}</p>
     </aside>
@@ -226,11 +317,11 @@ export default function EvidencePanel({ anomaly, onClose }) {
  */
 function PeerBandChart({ model, budgetLabel }) {
   const W = 320
-  const H = 96
-  const top = 16
-  const bandY = 30
-  const bandH = 20
-  const axisY = 74
+  const H = 104
+  const top = 20
+  const bandY = 34
+  const bandH = 22
+  const axisY = 80
   const px = (logValue) => (model.x(logValue) / 100) * W
 
   const bandLeft = px(model.bandLow)
@@ -238,7 +329,7 @@ function PeerBandChart({ model, budgetLabel }) {
   const medianX = px(model.logMedian)
   const fenceX = px(model.logFence)
   const dotX = px(model.logBudget)
-  const labelX = clamp(dotX, 42, W - 42)
+  const labelX = clamp(dotX, 46, W - 46)
 
   const aria = [
     'Comparison on a log scale.',
@@ -248,13 +339,7 @@ function PeerBandChart({ model, budgetLabel }) {
   ].join(' ')
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      role="img"
-      aria-label={aria}
-      className="peer-chart"
-    >
-      {/* axis tick lines and power-of-ten labels */}
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} className="peer-chart">
       {model.ticks.map((e) => {
         const x = px(e)
         if (x < 0 || x > W) {
@@ -263,14 +348,18 @@ function PeerBandChart({ model, budgetLabel }) {
         return (
           <g key={e}>
             <line x1={x} y1={axisY - 4} x2={x} y2={axisY} className="peer-chart-tick" />
-            <text x={x} y={axisY + 13} textAnchor="middle" className="peer-chart-tick-label">
+            <text
+              x={x}
+              y={axisY + 15}
+              textAnchor="middle"
+              className="peer-chart-tick-label"
+            >
               {formatPesoCompact(10 ** e)}
             </text>
           </g>
         )
       })}
 
-      {/* typical peer range */}
       <rect
         x={bandLeft}
         y={bandY}
@@ -287,23 +376,21 @@ function PeerBandChart({ model, budgetLabel }) {
         className="peer-chart-median"
       />
 
-      {/* flag threshold */}
       <line
         x1={fenceX}
-        y1={top - 4}
+        y1={top - 6}
         x2={fenceX}
         y2={axisY}
         className="peer-chart-fence"
       />
-      {fenceX > 40 && fenceX < W - 4 ? (
-        <text x={fenceX} y={top - 8} textAnchor="middle" className="peer-chart-label">
+      {fenceX > 44 && fenceX < W - 4 ? (
+        <text x={fenceX} y={top - 10} textAnchor="middle" className="peer-chart-label">
           flag threshold
         </text>
       ) : null}
 
-      {/* this project */}
       <circle cx={dotX} cy={bandY + bandH / 2} r={6.5} className="peer-chart-dot" />
-      <text x={labelX} y={bandY - 10} textAnchor="middle" className="peer-chart-label">
+      <text x={labelX} y={top - 10} textAnchor="middle" className="peer-chart-label">
         this project
       </text>
     </svg>
@@ -314,8 +401,8 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
 }
 
-// MAD is a log10 spread; show the raw value so the number matches the CSV
-// / parquet field exactly (prefixed with ± to signal symmetric spread).
+// MAD is a log10 spread; show the raw value so the number matches the exported
+// field exactly (prefixed with ± to signal symmetric spread).
 function madValue(mad) {
   if (mad === null || mad === undefined || !Number.isFinite(mad)) {
     return 'not available'
