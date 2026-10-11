@@ -24,6 +24,13 @@ env/
 data/
 !data/.gitkeep
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+# Generated copies of pipeline outputs (copied by frontend/scripts/copy-data.mjs).
+# Vendored map boundaries under frontend/public/geo/ are committed on purpose.
+frontend/public/data/
+
 # IDE / OS
 .vscode/
 .idea/

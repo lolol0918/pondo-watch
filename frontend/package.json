@@ -1,0 +1,26 @@
+{
+  "name": "pondo-watch-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Explainable public-infrastructure project screening dashboard.",
+  "scripts": {
+    "predev": "node scripts/copy-data.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/copy-data.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^7.0.0",
+    "vitest": "^5.0.3"
+  }
+}

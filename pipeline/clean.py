@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-RAW_FILE = ROOT / "dpwh_transparency_data.parquet"
+RAW_FILE = ROOT / "data" / "raw" / "dpwh_transparency_data.parquet"
 OUTPUT_FILE = ROOT / "data" / "processed" / "projects.parquet"
 
 
