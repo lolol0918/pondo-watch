@@ -22,8 +22,12 @@ def main():
         and bool(location.get("region"))
     )
 
+    # Same rule as pipeline.anomaly.BUNDLED_PATTERN: cluster(s),
+    # package(s), "various projects" and "various <project type> projects"
+    # (e.g. "various water supply projects"), without crossing a sentence
+    # break so ordinary descriptions are left alone.
     not_obviously_bundled = ~df["description"].str.contains(
-        r"\b(?:cluster|package|various projects)\b",
+        r"\b(?:clusters?|packages?)\b|\bvarious\b[^.\n]{0,48}?\bprojects?\b",
         case=False,
         na=False,
     )
