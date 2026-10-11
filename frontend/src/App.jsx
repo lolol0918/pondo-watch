@@ -7,7 +7,7 @@ import {
 import Disclaimer from './components/Disclaimer.jsx'
 import EvidencePanel from './components/EvidencePanel.jsx'
 import FlaggedProjectList from './components/FlaggedProjectList.jsx'
-import MapCoverageNote from './components/MapCoverageNote.jsx'
+import AboutMap from './components/AboutMap.jsx'
 import MarkerCoordinateStatus from './components/MarkerCoordinateStatus.jsx'
 import RegionMap from './components/RegionMap.jsx'
 import RegionSelector, { ALL_REGIONS } from './components/RegionSelector.jsx'
@@ -120,7 +120,7 @@ export default function App() {
                 onSelectProject={handleSelectProject}
                 onReset={handleResetView}
               />
-              <MapCoverageNote summary={!summary?.error ? summary : null} />
+              <AboutMap summary={!summary?.error ? summary : null} />
             </div>
           </section>
 
