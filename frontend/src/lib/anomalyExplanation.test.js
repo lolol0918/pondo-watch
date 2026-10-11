@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
   SCREENING_DISCLAIMER,
   SCOPE_NOTE,
+  buildEvidenceSummary,
   buildExplanation,
+  explainLegitimacy,
+  hasScopeKeywords,
+  scopeNoteFor,
 } from './anomalyExplanation.js'
 
 const record = {
@@ -62,5 +66,64 @@ describe('buildExplanation', () => {
     })
     expect(text).toContain('Region I')
     expect(text).not.toContain('undefined')
+  })
+})
+
+describe('buildEvidenceSummary', () => {
+  it('is a single sentence with budget, multiple and group size', () => {
+    const text = buildEvidenceSummary(record)
+    expect(text).toBe(
+      'Recorded budget of ₱1.75B is 381.5× the median of 68 comparable projects.',
+    )
+  })
+
+  it('survives missing fields without printing undefined', () => {
+    const text = buildEvidenceSummary({ budget: 1200000000 })
+    expect(text).toContain('₱1.2B')
+    expect(text).not.toContain('undefined')
+  })
+})
+
+describe('hasScopeKeywords', () => {
+  it('matches program/package/cluster/various in any case', () => {
+    expect(hasScopeKeywords('CONSTRUCTION UNDER THE LOCAL PROGRAM')).toBe(true)
+    expect(hasScopeKeywords('water supply packages, phase 2')).toBe(true)
+    expect(hasScopeKeywords('various water projects')).toBe(true)
+    expect(hasScopeKeywords('cluster of bridges')).toBe(true)
+  })
+
+  it('does not match ordinary descriptions', () => {
+    expect(hasScopeKeywords('CONSTRUCTION OF CONCRETE BRIDGE')).toBe(false)
+    expect(hasScopeKeywords(null)).toBe(false)
+    expect(hasScopeKeywords('')).toBe(false)
+  })
+})
+
+describe('explainLegitimacy', () => {
+  it('flags a wide peer group, scope keywords and a wide spread', () => {
+    const reasons = explainLegitimacy({
+      ...record,
+      group_size: 150,
+      description: 'LOCAL PROGRAM: WATER SUPPLY SYSTEM',
+      mad_log: 0.25,
+    })
+    const titles = reasons.map((r) => r.title)
+    expect(titles).toContain('Wide peer group')
+    expect(titles).toContain('Bundled or program scope')
+    expect(titles).toContain('Peer budgets vary widely')
+  })
+
+  it('returns an empty list when no data-driven factor applies', () => {
+    expect(explainLegitimacy(record)).toEqual([])
+    expect(explainLegitimacy({})).toEqual([])
+  })
+})
+
+describe('scopeNoteFor', () => {
+  it('mentions scope, geography and neutrality', () => {
+    const text = scopeNoteFor()
+    expect(text.toLowerCase()).toContain('scope differences')
+    expect(text.toLowerCase()).toContain('geographic')
+    expect(text.toLowerCase()).not.toContain('corrupt')
   })
 })

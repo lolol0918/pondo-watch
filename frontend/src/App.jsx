@@ -122,7 +122,10 @@ export default function App() {
                 selectedContractId={selected?.contractId ?? null}
                 onSelectProject={handleSelectProject}
               />
-              <EvidencePanel anomaly={selected} />
+              <EvidencePanel
+                anomaly={selected}
+                onClose={() => setSelected(null)}
+              />
             </>
           )}
           {anomaliesError ? (
