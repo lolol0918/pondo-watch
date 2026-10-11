@@ -155,7 +155,11 @@ export default function FlaggedProjectList({
     return (
       <div className="flagged-list" aria-busy="true">
         <ListHeading selectedRegion={selectedRegion} count={null} />
-        <div className="flagged-list-skeleton" aria-label="Loading flagged projects">
+        <div
+          className="flagged-list-skeleton"
+          role="status"
+          aria-label="Loading flagged projects"
+        >
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div className="skeleton-row" key={i}>
               <span className="skeleton-line skeleton-line-title" />
@@ -287,7 +291,7 @@ export default function FlaggedProjectList({
         ) : null}
 
         <div className="flagged-list-toolbar-meta">
-          <span className="flagged-list-count">
+          <span className="flagged-list-count" role="status" aria-live="polite">
             {rows.length === 0
               ? 'No matching projects'
               : `${formatInteger(rows.length)} ${

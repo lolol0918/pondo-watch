@@ -131,39 +131,17 @@ export default function EvidencePanel({ anomaly, onClose }) {
         </span>
       </section>
 
-      <section className="evidence-section" aria-label="Comparison">
-        <h4>Compare with its peer group</h4>
-        {visual ? (
-          <>
-            <PeerBandChart model={visual} budgetLabel={formatPesoCompact(anomaly.budget)} />
-            <p className="evidence-visual-caption">
-              The gray band shows the range where typical peer budgets fall
-              (median ± 1.5× MAD, log scale). The dashed line is the flag
-              threshold; the dot is this project&apos;s recorded budget.
-            </p>
-          </>
-        ) : (
-          <p className="evidence-not-available">
-            Comparison visual not available — budget or peer median missing.
-          </p>
-        )}
-      </section>
-
       <section className="evidence-section" aria-label="Calculation">
         <h4>How this was calculated</h4>
+        <p className="evidence-peer-line">
+          Compared with{' '}
+          {groupLabel && groupLabel !== 'not available'
+            ? groupLabel
+            : 'similar projects'}{' '}
+          in {anomaly.region} ({anomaly.infraYear}), a peer group of{' '}
+          {formatInteger(anomaly.group_size)} projects.
+        </p>
         <dl className="evidence-grid">
-          <div className="evidence-row">
-            <dt>Peer group</dt>
-            <dd>
-              {groupLabel && groupLabel !== 'not available'
-                ? `${groupLabel} in ${anomaly.region} (${anomaly.infraYear})`
-                : 'not available'}
-            </dd>
-          </div>
-          <div className="evidence-row">
-            <dt>Peer-group size</dt>
-            <dd>{formatInteger(anomaly.group_size)}</dd>
-          </div>
           <div className="evidence-row">
             <dt>Median budget</dt>
             <dd>{formatPeso(anomaly.median_budget)}</dd>
@@ -181,11 +159,24 @@ export default function EvidencePanel({ anomaly, onClose }) {
             <dd>{formatPeso(anomaly.fence_budget)}</dd>
           </div>
         </dl>
-        <p className="evidence-calc-note">
-          The pipeline flags a budget more than 3.0 robust-σ equivalents above
-          its peer-group median, in a peer group of at least 30 comparable
-          projects. The MAD is floored at 0.01 before scoring.
-        </p>
+      </section>
+
+      <section className="evidence-section" aria-label="Comparison">
+        <h4>Compare with its peer group</h4>
+        {visual ? (
+          <>
+            <PeerBandChart model={visual} budgetLabel={formatPesoCompact(anomaly.budget)} />
+            <p className="evidence-visual-caption">
+              The gray band shows the range where typical peer budgets fall
+              (median ± 1.5× MAD, log scale). The dashed line is the flag
+              threshold; the dot is this project&apos;s recorded budget.
+            </p>
+          </>
+        ) : (
+          <p className="evidence-not-available">
+            Comparison visual not available — budget or peer median missing.
+          </p>
+        )}
       </section>
 
       <section className="evidence-section" aria-label="Legitimate reasons">
@@ -210,6 +201,11 @@ export default function EvidencePanel({ anomaly, onClose }) {
       <section className="evidence-section evidence-source" aria-label="Source">
         <h4>Source</h4>
         <p>Data: DPWH annual infrastructure program, processed by the Pondo Watch pipeline.</p>
+        <p className="evidence-calc-note">
+          The pipeline flags a budget more than 3.0 robust-σ equivalents above
+          its peer-group median, in a peer group of at least 30 comparable
+          projects. The MAD is floored at 0.01 before scoring.
+        </p>
         {!hasCoords ? (
           <p className="evidence-coords-note">
             <strong>No coordinates available</strong> — this project is not

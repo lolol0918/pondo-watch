@@ -132,6 +132,9 @@ export default function App() {
 
   return (
     <div className="app">
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <header className="app-header">
         <div className="app-title-block">
           <h1>Pondo Watch</h1>
@@ -142,7 +145,7 @@ export default function App() {
         <Disclaimer />
       </header>
 
-      <main className="app-main">
+      <main className="app-main" id="main-content" tabIndex={-1}>
         <SummaryCards summary={!summary?.error ? summary : null} />
 
         <div className="dashboard">

@@ -105,7 +105,11 @@ export default function RegionMap({
   }
 
   return (
-    <div className="map-wrap">
+    <div
+      className="map-wrap"
+      role="region"
+      aria-label="Map of Philippine regions shaded by flagged share, with flagged-project markers"
+    >
       {loadError ? (
         <div className="map-error" role="alert">
           <p>Map boundaries failed to load.</p>

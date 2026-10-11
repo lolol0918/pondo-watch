@@ -44,6 +44,48 @@ body {
   min-width: 0;
 }
 
+/* --- Accessibility helpers --------------------------------------------- */
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -56px;
+  z-index: 2000;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 /* --- Header ------------------------------------------------------------ */
 
 .app-header {
@@ -1044,6 +1086,12 @@ body {
   text-align: right;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
+}
+
+.evidence-peer-line {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .evidence-calc-note {
