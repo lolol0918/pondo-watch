@@ -6,6 +6,7 @@ by ``pipeline.anomaly``) and writes two files the React dashboard consumes::
 
     data/processed/projects.json
     data/processed/cost_anomalies.json
+    data/processed/region_summary.json
 
 It changes nothing upstream. Anomaly detection lives entirely in
 ``pipeline.anomaly``; this module only selects fields, makes every value
@@ -17,6 +18,12 @@ Two kinds of helpers are kept deliberately separate:
   ``projects_to_records``, ``anomalies_to_records``) turn frames into plain
   Python records and can be unit-tested without touching the filesystem;
 * a thin *file-writing* helper (``write_json``) that only encodes and saves.
+
+Anomaly records carry the detector's own ``ANOMALY_COLUMNS`` plus
+``latitude``/``longitude`` so the map can plot flagged projects. Those two
+fields are not part of the evidence schema; they are copied from the matching
+project record (by ``contractId``) and are ``null`` when the project has no
+coordinates.
 """
 
 import datetime
@@ -126,17 +133,51 @@ def projects_to_records(df):
     return [project_to_record(row) for row in df.to_dict(orient="records")]
 
 
-def anomalies_to_records(flagged_df):
+def coordinate_lookup(project_records):
+    """Map ``contractId`` -> ``(latitude, longitude)`` from project records.
+
+    Coordinates are read from the already-serialized project records (the same
+    frame the anomalies were detected from), so the join is always consistent.
+    Values are passed through ``to_jsonable`` so missing coordinates become
+    JSON ``null`` rather than NaN.
+    """
+    lookup = {}
+    for record in project_records or []:
+        contract_id = record.get("contractId")
+        if contract_id is None:
+            continue
+        lookup[contract_id] = (
+            to_jsonable(record.get("latitude")),
+            to_jsonable(record.get("longitude")),
+        )
+    return lookup
+
+
+def anomalies_to_records(flagged_df, project_records=None):
     """Convert flagged anomalies into records keyed by ``ANOMALY_COLUMNS``.
 
     ``ANOMALY_COLUMNS`` is imported from ``pipeline.anomaly`` so the exported
-    evidence schema can never drift from the detector's own definition.
+    evidence schema can never drift from the detector's own definition. When
+    ``project_records`` is given, each record additionally gains
+    ``latitude``/``longitude`` looked up by ``contractId``; projects without
+    coordinates keep JSON ``null`` values.
     """
     columns = [col for col in ANOMALY_COLUMNS if col in flagged_df.columns]
-    return [
+    records = [
         {col: to_jsonable(row[col]) for col in columns}
         for row in flagged_df[columns].to_dict(orient="records")
     ]
+
+    if project_records is not None:
+        lookup = coordinate_lookup(project_records)
+        for record in records:
+            latitude, longitude = lookup.get(
+                record.get("contractId"), (None, None)
+            )
+            record["latitude"] = latitude
+            record["longitude"] = longitude
+
+    return records
 
 
 def write_json(records, path):
@@ -160,7 +201,7 @@ def main():
     flagged = flagged_projects(projects, baselines)
 
     project_records = projects_to_records(projects)
-    anomaly_records = anomalies_to_records(flagged)
+    anomaly_records = anomalies_to_records(flagged, project_records)
     region_summary = build_region_summary(project_records, anomaly_records)
 
     write_json(project_records, PROJECTS_JSON)

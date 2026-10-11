@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { formatInteger, formatMultiple, formatPesoCompact, formatScore } from '../lib/format.js'
+import { formatInteger, formatMultiple, formatPesoCompact, formatZScore } from '../lib/format.js'
 import { ALL_REGIONS } from './RegionSelector.jsx'
 
 const PAGE_SIZE = 50
@@ -85,7 +85,7 @@ export default function FlaggedProjectList({
                     {formatMultiple(a.median_multiple)} median
                   </span>
                   <span className="flagged-item-score">
-                    {formatScore(a.anomaly_score)}
+                    {formatZScore(a.anomaly_score)}
                   </span>
                 </span>
               </button>

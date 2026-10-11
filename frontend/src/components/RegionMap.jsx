@@ -4,32 +4,14 @@ import { GeoJSON, MapContainer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import { GEOJSON_URL } from '../api/dataSource.js'
-import {
-  buildPsgcLookup,
-  findRowByLabel,
-} from '../lib/regions.js'
+import { buildPsgcLookup, findRowByLabel } from '../lib/regions.js'
 import { formatInteger, formatPercent } from '../lib/format.js'
+import { colorForFlaggedShare, maxFlaggedShare } from '../lib/scale.js'
+import FlaggedMarkers from './FlaggedMarkers.jsx'
+import MapController from './MapController.jsx'
 
-// Choropleth palette: near-white to red as the flagged share rises.
-const COLOR_MIN = '#fef3f2'
-const COLOR_SPIKE = '#dc2626'
-const MISSING_COLOR = '#e7e7e7'
-const MISSING_STROKE = '#cbd5e1'
 const STROKE = '#64748b'
 const SELECTED_STROKE = '#0f172a'
-
-function colorForScale(value, max) {
-  if (!max || value === null || value === undefined) {
-    return MISSING_COLOR
-  }
-  const t = Math.min(value / max, 1)
-  const c = (start, end) =>
-    Math.round(start + (end - start) * t)
-  const r = c(parseInt(COLOR_MIN.slice(1, 3), 16), parseInt(COLOR_SPIKE.slice(1, 3), 16))
-  const g = c(parseInt(COLOR_MIN.slice(3, 5), 16), parseInt(COLOR_SPIKE.slice(3, 5), 16))
-  const b = c(parseInt(COLOR_MIN.slice(5, 7), 16), parseInt(COLOR_SPIKE.slice(5, 7), 16))
-  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
-}
 
 function FitToData({ data }) {
   const map = useMap()
@@ -43,7 +25,14 @@ function FitToData({ data }) {
   return null
 }
 
-export default function RegionMap({ summary, selectedRegion, onSelectRegion }) {
+export default function RegionMap({
+  summary,
+  selectedRegion,
+  onSelectRegion,
+  markers,
+  selected,
+  onSelectProject,
+}) {
   const [geo, setGeo] = useState(null)
   const [loadError, setLoadError] = useState(false)
 
@@ -74,25 +63,16 @@ export default function RegionMap({ summary, selectedRegion, onSelectRegion }) {
     }
   }, [])
 
-  const maxShare = useMemo(() => {
-    let max = 0
-    for (const row of summary?.regions ?? []) {
-      if (row.on_map && row.flagged_percentage > max) {
-        max = row.flagged_percentage
-      }
-    }
-    return max
-  }, [summary])
+  const maxShare = useMemo(() => maxFlaggedShare(summary), [summary])
 
   const styleFor = (feature) => {
     const code = feature.properties?.adm1_psgc
     const row = psgcLookup.get(code)
-    const isSelected =
-      selectedRow && row && row.psgc === selectedRow.psgc
+    const isSelected = selectedRow && row && row.psgc === selectedRow.psgc
     return {
       color: isSelected ? SELECTED_STROKE : STROKE,
       weight: isSelected ? 2 : 0.8,
-      fillColor: colorForScale(row?.flagged_percentage, maxShare),
+      fillColor: colorForFlaggedShare(row?.flagged_percentage, maxShare),
       fillOpacity: row ? 0.85 : 0.5,
     }
   }
@@ -122,11 +102,17 @@ export default function RegionMap({ summary, selectedRegion, onSelectRegion }) {
       {loadError ? (
         <div className="map-error">Map boundaries failed to load.</div>
       ) : (
+        // preferCanvas renders all vectors (polygons and the flagged-project
+        // dots) on Leaflet canvas layers, which keeps thousands of markers
+        // fast. Dots sit in the marker pane above the polygons, and markers
+        // set bubblingMouseEvents=false, so region polygons never swallow or
+        // block a marker click.
         <MapContainer
           className="region-map"
           center={[12.5, 122.0]}
           zoom={5}
           scrollWheelZoom={false}
+          preferCanvas
         >
           {geo ? (
             <>
@@ -138,11 +124,26 @@ export default function RegionMap({ summary, selectedRegion, onSelectRegion }) {
               <FitToData data={geo} />
             </>
           ) : null}
+          <FlaggedMarkers
+            markers={markers}
+            summary={summary}
+            selectedContractId={selected?.contractId ?? null}
+            onSelectProject={onSelectProject}
+          />
+          <MapController
+            geo={geo}
+            summary={summary}
+            selectedRegion={selectedRegion}
+            selected={selected}
+            markers={markers}
+          />
         </MapContainer>
       )}
-      <div className="map-legend" aria-hidden="true">
-        <span className="legend-swatch" style={{ backgroundColor: COLOR_SPIKE }} />
-        higher flagged share &rarr; lighter
+      <div className="map-legend" aria-label="Legend: flagged share">
+        <span className="legend-end">Low</span>
+        <span className="legend-gradient" />
+        <span className="legend-end">High</span>
+        <span className="legend-label">flagged share</span>
       </div>
     </div>
   )

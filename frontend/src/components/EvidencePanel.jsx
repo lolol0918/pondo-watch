@@ -1,9 +1,9 @@
-import { buildExplanation } from '../lib/anomalyExplanation.js'
+import { buildExplanation, SCOPE_NOTE } from '../lib/anomalyExplanation.js'
 import {
   formatInteger,
   formatMultiple,
   formatPeso,
-  formatScore,
+  formatZScore,
 } from '../lib/format.js'
 
 const SCREENING_HINT =
@@ -28,7 +28,7 @@ export default function EvidencePanel({ anomaly }) {
     ['Budget (allotted)', formatPeso(anomaly.budget)],
     ['Peer-group median budget', formatPeso(anomaly.median_budget)],
     ['Budget vs. peer median', formatMultiple(anomaly.median_multiple)],
-    ['Anomaly score', formatScore(anomaly.anomaly_score)],
+    ['Modified z-score', formatZScore(anomaly.anomaly_score)],
     ['Peer-group size', formatInteger(anomaly.group_size)],
     ['Robust fence (flag threshold)', formatPeso(anomaly.fence_budget)],
     ['Peer-group spread (MAD, log10)', madValue(anomaly.mad_log)],
@@ -51,6 +51,7 @@ export default function EvidencePanel({ anomaly }) {
       <div className="evidence-explanation">
         <h3>Plain-language explanation</h3>
         <p>{buildExplanation(anomaly)}</p>
+        <p>{SCOPE_NOTE}</p>
       </div>
 
       <p className="evidence-hint">{SCREENING_HINT}</p>

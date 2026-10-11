@@ -145,10 +145,10 @@ body {
   bottom: 44px;
   right: 10px;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 6px 10px;
   font-size: 0.75rem;
   color: var(--muted);
   display: flex;
@@ -156,11 +156,32 @@ body {
   gap: 6px;
 }
 
-.legend-swatch {
-  width: 14px;
-  height: 14px;
+.legend-gradient {
+  width: 84px;
+  height: 10px;
   border-radius: 3px;
-  display: inline-block;
+  background: linear-gradient(to right, #fef3f2, #dc2626);
+  border: 1px solid rgba(16, 24, 40, 0.12);
+}
+
+.legend-end {
+  font-weight: 600;
+  color: #374151;
+}
+
+.legend-label {
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.marker-status {
+  margin-bottom: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .map-coverage {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   SCREENING_DISCLAIMER,
+  SCOPE_NOTE,
   buildExplanation,
 } from './anomalyExplanation.js'
 
@@ -27,7 +28,13 @@ describe('buildExplanation', () => {
     expect(text).toContain('68')
     expect(text).toContain('Region XI')
     expect(text).toContain('(2021)')
-    expect(text).toContain('4.71σ')
+    expect(text).toContain('4.71')
+  })
+
+  it('calls the statistic a modified z-score and never prints σ', () => {
+    const text = buildExplanation(record)
+    expect(text.toLowerCase()).toContain('modified z-score')
+    expect(text).not.toContain('σ')
   })
 
   it('explicitly frames the signal as statistical', () => {
@@ -40,6 +47,11 @@ describe('buildExplanation', () => {
     expect(lower).not.toContain('corrupt')
     expect(lower).not.toContain('fraud')
     expect(lower).not.toContain('overpric')
+  })
+
+  it('notes that scope differences can explain an outlier', () => {
+    expect(SCOPE_NOTE.toLowerCase()).toContain('scope differences')
+    expect(SCOPE_NOTE.toLowerCase()).toContain('not a finding')
   })
 
   it('survives missing evidence fields', () => {

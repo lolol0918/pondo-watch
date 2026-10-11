@@ -6,7 +6,7 @@ import {
   formatPercent,
   formatPeso,
   formatPesoCompact,
-  formatScore,
+  formatZScore,
 } from './format.js'
 
 describe('formatPeso', () => {
@@ -35,7 +35,7 @@ describe('formatPesoCompact', () => {
   })
 })
 
-describe('formatInteger / formatPercent / formatMultiple / formatScore', () => {
+describe('formatInteger / formatPercent / formatMultiple / formatZScore', () => {
   it('formats integers with separators', () => {
     expect(formatInteger(5443)).toBe('5,443')
     expect(formatInteger(null)).toBe('—')
@@ -51,7 +51,9 @@ describe('formatInteger / formatPercent / formatMultiple / formatScore', () => {
     expect(formatMultiple(1.0)).toBe('1×')
   })
 
-  it('formats anomaly scores in robust sigmas', () => {
-    expect(formatScore(4.708261779581363)).toBe('4.71σ')
+  it('formats the modified z-score as a plain two-decimal number', () => {
+    expect(formatZScore(4.708261779581363)).toBe('4.71')
+    expect(formatZScore(4.708261779581363)).not.toContain('σ')
+    expect(formatZScore(null)).toBe('—')
   })
 })

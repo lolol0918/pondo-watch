@@ -5,7 +5,7 @@
 // panel. The wording is deliberately measured: a flag is a screening signal,
 // not an accusation.
 
-import { formatPesoCompact, formatMultiple, formatScore } from './format.js'
+import { formatPesoCompact, formatMultiple, formatZScore } from './format.js'
 
 /**
  * Turn one cost-anomaly record into a sentence the reader can verify against
@@ -17,17 +17,27 @@ import { formatPesoCompact, formatMultiple, formatScore } from './format.js'
 export function buildExplanation(record) {
   const group = record.group_size ?? 'n/a'
   const multiple = formatMultiple(record.median_multiple)
-  const score = formatScore(record.anomaly_score)
+  const score = formatZScore(record.anomaly_score)
   const budget = formatPesoCompact(record.budget)
 
   const sentence =
     `Its budget of ${budget} is ${multiple} the median budget of the ` +
     `${group} comparable ${pluralize(record.category)} in ` +
-    `${record.region} (${record.infraYear}). The anomaly score of ${score} ` +
-    `is how far above the peer-group median this project sits.`
+    `${record.region} (${record.infraYear}). Its modified z-score of ${score} ` +
+    `shows how far above the peer-group median this project sits.`
 
   return sentence
 }
+
+/**
+ * Where the plain-language explanation leaves off. Scope differences are the
+ * most common legitimate reason an apparently high multiple is not actually a
+ * red flag, so the evidence panel stays honest by saying so.
+ */
+export const SCOPE_NOTE =
+  'Scope differences — a larger structure, harder site conditions, or a ' +
+  'genuinely different scope of work — can legitimately explain an unusually ' +
+  'high multiple. A flag is a reason for further review, not a finding.'
 
 /**
  * The neutral framing shown wherever a project or list of projects is

@@ -60,12 +60,15 @@ export function formatMultiple(value) {
   return `${trimmed(value, 3)}×`
 }
 
-/** Anomaly score in robust sigmas, e.g. 4.708 -> "4.71σ". */
-export function formatScore(value) {
+/**
+ * Modified z-score, e.g. 4.708 -> "4.71". Shown without a σ symbol; the
+ * "Modified z-score" label in the UI carries the meaning.
+ */
+export function formatZScore(value) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '—'
   }
-  return `${value.toFixed(2)}σ`
+  return value.toFixed(2)
 }
 
 /** Trim a float for compact display without trailing zeros. */

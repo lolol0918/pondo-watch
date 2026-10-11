@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   loadAnomalies,
@@ -8,10 +8,11 @@ import Disclaimer from './components/Disclaimer.jsx'
 import EvidencePanel from './components/EvidencePanel.jsx'
 import FlaggedProjectList from './components/FlaggedProjectList.jsx'
 import MapCoverageNote from './components/MapCoverageNote.jsx'
+import MarkerCoordinateStatus from './components/MarkerCoordinateStatus.jsx'
 import RegionMap from './components/RegionMap.jsx'
 import RegionSelector, { ALL_REGIONS } from './components/RegionSelector.jsx'
 import SummaryCards from './components/SummaryCards.jsx'
-import { findRowByLabel } from './lib/regions.js'
+import { withCoordinates } from './lib/markers.js'
 
 export default function App() {
   const [summary, setSummary] = useState(null)
@@ -53,7 +54,21 @@ export default function App() {
     setSelected(null)
   }
 
-  const selectedRow = findRowByLabel(summary, selectedRegion)
+  const handleSelectProject = (anomaly) => {
+    setSelected(anomaly)
+    // Focus the list on the project's region, unless it is already focused.
+    const isAll = !selectedRegion || selectedRegion === ALL_REGIONS
+    if (anomaly.region && (isAll || anomaly.region !== selectedRegion)) {
+      setSelectedRegion(anomaly.region)
+    }
+  }
+
+  // The dots drawn on the map: valid-coordinate flagged projects, scoped to
+  // the selected region (or all of them when no region is chosen).
+  const markers = useMemo(
+    () => withCoordinates(anomalies, selectedRegion || null),
+    [anomalies, selectedRegion],
+  )
 
   return (
     <div className="app">
@@ -71,10 +86,18 @@ export default function App() {
         <SummaryCards summary={!summary?.error ? summary : null} />
 
         <section className="map-section">
+          <MarkerCoordinateStatus
+            anomalies={anomalies}
+            markers={markers}
+            selectedRegion={selectedRegion}
+          />
           <RegionMap
             summary={!summary?.error ? summary : null}
             selectedRegion={selectedRegion}
             onSelectRegion={handleSelectRegion}
+            markers={markers}
+            selected={selected}
+            onSelectProject={handleSelectProject}
           />
           <MapCoverageNote summary={!summary?.error ? summary : null} />
           <RegionSelector
@@ -97,14 +120,7 @@ export default function App() {
                 anomalies={anomalies}
                 selectedRegion={selectedRegion}
                 selectedContractId={selected?.contractId ?? null}
-                onSelectProject={(anomaly) => {
-                  setSelected(anomaly)
-                  if (anomaly.region && !selectedRow) {
-                    // Selecting a project also focuses its region, unless the
-                    // region isn't drawable (e.g. Negros Island Region).
-                    setSelectedRegion(anomaly.region)
-                  }
-                }}
+                onSelectProject={handleSelectProject}
               />
               <EvidencePanel anomaly={selected} />
             </>
