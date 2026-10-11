@@ -4,6 +4,7 @@ import {
   ALL_REGIONS,
   countActiveFilters,
   filterFlagged,
+  relaxFiltersFor,
   sortFlagged,
 } from './listFilters.js'
 
@@ -95,5 +96,86 @@ describe('countActiveFilters', () => {
     expect(countActiveFilters({ query: 'x', category: 'Roads' })).toBe(2)
     expect(countActiveFilters({ query: '  ', minRatio: '' })).toBe(0)
     expect(countActiveFilters({ year: '2021' })).toBe(1)
+  })
+
+  it('counts a non-default region and the program-level toggle', () => {
+    expect(countActiveFilters({ region: 'Region XI' })).toBe(1)
+    expect(countActiveFilters({ region: ALL_REGIONS })).toBe(0)
+    expect(countActiveFilters({ showProgramLevel: true })).toBe(1)
+  })
+})
+
+describe('filterFlagged program-level toggle', () => {
+  it('defaults to keeping program-level rows', () => {
+    expect(filterFlagged(sample, {}).map((a) => a.contractId)).toEqual([
+      'A1',
+      'B2',
+      'C3',
+    ])
+  })
+
+  it('drops program-level descriptions when asked', () => {
+    expect(
+      filterFlagged(sample, { hideProgramLevel: true }).map((a) => a.contractId),
+    ).toEqual(['A1', 'C3'])
+  })
+
+  it('treats a widened peer group as program-level', () => {
+    const widened = [
+      {
+        contractId: 'D4',
+        description: 'ROAD CONCRETING',
+        category: 'Roads',
+        componentCategories: 'Roads, Bridges and Water',
+        region: 'Region XI',
+        infraYear: '2021',
+      },
+    ]
+    expect(filterFlagged(widened, { hideProgramLevel: true })).toEqual([])
+  })
+})
+
+describe('relaxFiltersFor', () => {
+  const record = {
+    contractId: 'A1',
+    description: 'CONSTRUCTION OF CONCRETE BRIDGE',
+    region: 'Region XI',
+    infraYear: '2021',
+    category: 'Bridges',
+    median_multiple: 12,
+  }
+
+  it('clears only the filters that exclude the record', () => {
+    expect(
+      relaxFiltersFor(record, { region: 'Region XI', category: 'Roads', year: '2021' }),
+    ).toEqual({ region: null, filters: { category: '' } })
+  })
+
+  it('widens the region when it excludes the record', () => {
+    expect(relaxFiltersFor(record, { region: 'Region I' })).toEqual({
+      region: ALL_REGIONS,
+      filters: {},
+    })
+  })
+
+  it('clears a search, year or minimum ratio that excludes the record', () => {
+    expect(relaxFiltersFor(record, { query: 'water' })).toEqual({
+      region: null,
+      filters: { query: '' },
+    })
+    expect(relaxFiltersFor(record, { year: '2020' })).toEqual({
+      region: null,
+      filters: { year: '' },
+    })
+    expect(relaxFiltersFor(record, { minRatio: '50' })).toEqual({
+      region: null,
+      filters: { minRatio: '' },
+    })
+  })
+
+  it('makes no change when the record already matches', () => {
+    expect(
+      relaxFiltersFor(record, { region: 'Region XI', category: 'Bridges', year: '2021', minRatio: '10' }),
+    ).toEqual({ region: null, filters: {} })
   })
 })

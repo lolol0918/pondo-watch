@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  PROGRAM_LEVEL_TAG,
   SCREENING_DISCLAIMER,
   SCOPE_NOTE,
   buildEvidenceSummary,
   buildExplanation,
+  buildHeadline,
   explainLegitimacy,
   hasScopeKeywords,
+  isProgramLevel,
+  isWidenedPeerGroup,
+  peerGroupLine,
   scopeNoteFor,
 } from './anomalyExplanation.js'
 
@@ -125,5 +130,53 @@ describe('scopeNoteFor', () => {
     expect(text.toLowerCase()).toContain('scope differences')
     expect(text.toLowerCase()).toContain('geographic')
     expect(text.toLowerCase()).not.toContain('corrupt')
+  })
+})
+
+describe('isProgramLevel', () => {
+  it('detects scope keywords and widened peer groups', () => {
+    expect(isWidenedPeerGroup({ category: 'Bridges', componentCategories: 'Bridges' })).toBe(false)
+    expect(
+      isWidenedPeerGroup({ category: 'Roads', componentCategories: 'Roads, Bridges' }),
+    ).toBe(true)
+    expect(isProgramLevel({ description: 'BRIDGE CONSTRUCTION' })).toBe(false)
+    expect(isProgramLevel({ description: 'WATER SUPPLY PROGRAM' })).toBe(true)
+    expect(
+      isProgramLevel({
+        description: 'BRIDGE CONSTRUCTION',
+        category: 'Roads',
+        componentCategories: 'Roads, Bridges',
+      }),
+    ).toBe(true)
+  })
+
+  it('exposes a neutral tag', () => {
+    expect(PROGRAM_LEVEL_TAG).toContain('Program-level line')
+  })
+})
+
+describe('buildHeadline and peerGroupLine', () => {
+  it('states the budget, multiple and typical peer budget', () => {
+    expect(
+      buildHeadline({
+        budget: 1747730781.43,
+        median_budget: 4581125.03,
+        median_multiple: 381.5068938249917,
+      }),
+    ).toBe(
+      'Recorded budget of ₱1.75B is 381.5× the typical comparable project (₱4.58M).',
+    )
+  })
+
+  it('names the peer group and its size', () => {
+    const line = peerGroupLine({ ...record, region: 'Region XI', infraYear: '2021' })
+    expect(line).toContain('Bridges')
+    expect(line).toContain('Region XI')
+    expect(line).toContain('68 comparable projects')
+  })
+
+  it('never prints undefined for missing fields', () => {
+    expect(buildHeadline({ budget: 1000 })).not.toContain('undefined')
+    expect(peerGroupLine({})).not.toContain('undefined')
   })
 })

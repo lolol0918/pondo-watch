@@ -47,6 +47,60 @@ export function buildEvidenceSummary(record) {
   )
 }
 
+function groupLabelFor(record) {
+  if (
+    record?.componentCategories &&
+    record?.category &&
+    record.componentCategories !== record.category
+  ) {
+    return `${record.componentCategories} (component category)`
+  }
+  return record?.category ?? 'similar projects'
+}
+
+/**
+ * The headline shown at the top of the evidence panel, e.g.
+ * "Recorded budget ₱34.31M is 11.6× the typical comparable project (₱2.97M)."
+ * Only uses the recorded budget, the peer median and the multiple.
+ *
+ * @param {object} record
+ * @returns {string}
+ */
+export function buildHeadline(record) {
+  const multiple = formatMultiple(record?.median_multiple)
+  const budget = formatPesoCompact(record?.budget)
+  const median = formatPesoCompact(record?.median_budget)
+  if (!Number.isFinite(record?.median_budget)) {
+    return `Recorded budget of ${budget} is ${multiple} the typical comparable project.`
+  }
+  return (
+    `Recorded budget of ${budget} is ${multiple} the typical comparable ` +
+    `project (${median}).`
+  )
+}
+
+/**
+ * One line naming the peer group and its size, e.g.
+ * "Peer group: Bridges in Region XI (2021) — 68 comparable projects."
+ *
+ * @param {object} record
+ * @returns {string}
+ */
+export function peerGroupLine(record) {
+  const group = groupLabelFor(record)
+  const size = Number.isFinite(record?.group_size)
+    ? record.group_size
+    : null
+  const sizeText =
+    size === null
+      ? 'size not available'
+      : `${formatInteger(size)} comparable ${size === 1 ? 'project' : 'projects'}`
+  const where = [record?.region, record?.infraYear && `(${record.infraYear})`]
+    .filter(Boolean)
+    .join(' ')
+  return `Peer group: ${group}${where ? ` in ${where}` : ''} — ${sizeText}.`
+}
+
 /**
  * Descriptions that suggest a bundled or program-level scope of work. These
  * words can signal that the recorded budget covers several projects rather
@@ -63,6 +117,37 @@ const SCOPE_KEYWORDS = /\b(programs?|packages?|clusters?|various)\b/i
 export function hasScopeKeywords(description) {
   return Boolean(description) && SCOPE_KEYWORDS.test(description)
 }
+
+/**
+ * A widened peer group: the pipeline groups projects by `componentCategories`,
+ * and when that differs from the project's own `category` the comparison pool
+ * spans more than one category. Derived client-side from the two exported
+ * fields; no threshold or classification is re-derived from the pipeline.
+ *
+ * @param {object} record
+ * @returns {boolean}
+ */
+export function isWidenedPeerGroup(record) {
+  const component = record?.componentCategories
+  const category = record?.category
+  return Boolean(component) && Boolean(category) && component !== category
+}
+
+/**
+ * A "program-level line": a description that names a program/package/cluster/
+ * "various" scope, or a project compared against a widened peer group. These
+ * rows are hidden by default behind the "Hide program-level lines" toggle
+ * because their budget may cover several projects at once.
+ *
+ * @param {object} record
+ * @returns {boolean}
+ */
+export function isProgramLevel(record) {
+  return hasScopeKeywords(record?.description) || isWidenedPeerGroup(record)
+}
+
+/** Neutral tag shown on program-level rows (never a verdict). */
+export const PROGRAM_LEVEL_TAG = 'Program-level line: scope unclear'
 
 // A peer group of at least this many comparable projects is treated as
 // "wide": a median drawn from a large group is a stable reference point.

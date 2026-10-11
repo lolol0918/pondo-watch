@@ -18,6 +18,9 @@ export function readUrlState(search) {
     year: params.get('year') || '',
     minRatio: params.get('minRatio') || '',
     sort: params.get('sort') || DEFAULT_SORT,
+    // Program-level lines are hidden by default; `program=all` opts into
+    // showing them, so the default state keeps a clean URL.
+    showProgramLevel: params.get('program') === 'all',
   }
 }
 
@@ -43,6 +46,9 @@ export function buildSearch(state) {
   }
   if (state.sort && state.sort !== DEFAULT_SORT) {
     params.set('sort', state.sort)
+  }
+  if (state.showProgramLevel) {
+    params.set('program', 'all')
   }
   return params.toString()
 }

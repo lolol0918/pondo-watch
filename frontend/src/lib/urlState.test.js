@@ -13,12 +13,13 @@ describe('readUrlState', () => {
       year: '',
       minRatio: '',
       sort: DEFAULT_SORT,
+      showProgramLevel: false,
     })
   })
 
   it('parses every tracked field', () => {
     const search =
-      '?region=Region%20II&project=ABC-123&q=talomo&category=Bridge&year=2021&minRatio=50&sort=budget'
+      '?region=Region%20II&project=ABC-123&q=talomo&category=Bridge&year=2021&minRatio=50&sort=budget&program=all'
     expect(readUrlState(search)).toEqual({
       region: 'Region II',
       project: 'ABC-123',
@@ -27,6 +28,7 @@ describe('readUrlState', () => {
       year: '2021',
       minRatio: '50',
       sort: 'budget',
+      showProgramLevel: true,
     })
   })
 
@@ -59,8 +61,14 @@ describe('buildSearch', () => {
       year: '2021',
       minRatio: '50',
       sort: 'budget',
+      showProgramLevel: true,
     }
     expect(readUrlState(`?${buildSearch(state)}`)).toEqual(state)
+  })
+
+  it('omits the default program-level state', () => {
+    expect(buildSearch({ showProgramLevel: false })).toBe('')
+    expect(buildSearch({ showProgramLevel: true })).toBe('program=all')
   })
 
   it('keeps a non-default sort and drops the default one', () => {
