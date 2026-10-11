@@ -6,7 +6,11 @@ import 'leaflet/dist/leaflet.css'
 import { GEOJSON_URL } from '../api/dataSource.js'
 import { buildPsgcLookup, findRowByLabel } from '../lib/regions.js'
 import { formatInteger, formatPercent } from '../lib/format.js'
-import { colorForFlaggedShare, maxFlaggedShare } from '../lib/scale.js'
+import {
+  SEVERITY_BUCKETS,
+  colorForFlaggedShare,
+  maxFlaggedShare,
+} from '../lib/scale.js'
 import FlaggedMarkers from './FlaggedMarkers.jsx'
 import MapController from './MapController.jsx'
 
@@ -32,6 +36,7 @@ export default function RegionMap({
   markers,
   selected,
   onSelectProject,
+  onReset,
 }) {
   const [geo, setGeo] = useState(null)
   const [loadError, setLoadError] = useState(false)
@@ -136,14 +141,43 @@ export default function RegionMap({
             selectedRegion={selectedRegion}
             selected={selected}
             markers={markers}
+            onReset={onReset}
           />
         </MapContainer>
       )}
-      <div className="map-legend" aria-label="Legend: flagged share">
-        <span className="legend-end">Low</span>
-        <span className="legend-gradient" />
-        <span className="legend-end">High</span>
-        <span className="legend-label">flagged share</span>
+      <div className="map-legend" aria-label="Map legend">
+        <div className="legend-block">
+          <span className="legend-block-title">Region fill — flagged share</span>
+          <span className="legend-row">
+            <span className="legend-end">Low</span>
+            <span className="legend-gradient" />
+            <span className="legend-end">High</span>
+          </span>
+        </div>
+        <div className="legend-block">
+          <span className="legend-block-title">
+            Markers — budget vs. peer median
+          </span>
+          <span className="legend-buckets">
+            {SEVERITY_BUCKETS.map((bucket) => (
+              <span className="legend-bucket" key={bucket.key}>
+                <span
+                  className="legend-dot"
+                  style={{ backgroundColor: bucket.color }}
+                />
+                {bucket.label}
+              </span>
+            ))}
+          </span>
+          <span className="legend-row legend-sizes">
+            <span className="legend-size">
+              <span className="legend-dot legend-dot-small" /> near median
+            </span>
+            <span className="legend-size">
+              <span className="legend-dot legend-dot-large" /> far above
+            </span>
+          </span>
+        </div>
       </div>
     </div>
   )

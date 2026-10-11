@@ -153,22 +153,42 @@ body {
   bottom: 44px;
   right: 10px;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.95);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 8px 10px;
   font-size: 0.75rem;
   color: var(--muted);
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 240px;
+}
+
+.legend-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.legend-block-title {
+  font-weight: 700;
+  color: #374151;
+}
+
+.legend-row {
+  display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .legend-gradient {
   width: 84px;
   height: 10px;
   border-radius: 3px;
-  background: linear-gradient(to right, #fef3f2, #dc2626);
+  background: linear-gradient(to right, #eef2f6, #4f7196);
   border: 1px solid rgba(16, 24, 40, 0.12);
 }
 
@@ -177,9 +197,80 @@ body {
   color: #374151;
 }
 
-.legend-label {
-  color: var(--muted);
-  margin-left: 2px;
+.legend-buckets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.legend-bucket {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(15, 23, 42, 0.35);
+  display: inline-block;
+}
+
+.legend-dot-small {
+  width: 6px;
+  height: 6px;
+  background: #cbd5e1;
+}
+
+.legend-dot-large {
+  width: 12px;
+  height: 12px;
+  background: #cbd5e1;
+}
+
+.legend-sizes {
+  font-size: 0.72rem;
+}
+
+/* Reset-view corner button (a Leaflet bar control) */
+.reset-view-control a {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1c2530;
+  background: #ffffff;
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 28px;
+}
+
+.reset-view-control a:hover {
+  background: #f4f6f8;
+}
+
+/* Marker tooltips */
+.region-map .leaflet-tooltip {
+  padding: 6px 9px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.marker-tooltip-title {
+  display: block;
+  font-weight: 600;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marker-tooltip-row {
+  display: block;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
 }
 
 .marker-status {

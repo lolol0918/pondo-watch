@@ -1,29 +1,40 @@
 import { memo } from 'react'
 import { CircleMarker, Tooltip } from 'react-leaflet'
 
-import { colorForFlaggedShare, maxFlaggedShare } from '../lib/scale.js'
+import { formatMultiple, formatPesoCompact } from '../lib/format.js'
+import {
+  markerRadiusForRatio,
+  severityForRatio,
+} from '../lib/scale.js'
 
-// One small canvas-rendered dot per flagged project. Radii stay tiny so dense
-// areas (e.g. Metro Manila) do not merge into a solid blob. `bubblingMouseEvents`
-// is false so clicking a dot never falls through to the region polygon.
-function FlaggedMarker({ anomaly, fillColor, selected, onSelectProject }) {
+// One small canvas-rendered dot per flagged project. Colour encodes the
+// severity bucket (colorblind-safe palette) and radius encodes the ratio on a
+// log scale (3-9 px). `bubblingMouseEvents` is false so clicking a dot never
+// falls through to the region polygon below it.
+function FlaggedMarker({ anomaly, radius, selected, onSelectProject }) {
+  const bucket = severityForRatio(anomaly.median_multiple)
+  const r = selected ? radius + 2.5 : radius
   return (
     <CircleMarker
       center={[anomaly.latitude, anomaly.longitude]}
-      radius={selected ? 6 : 3.5}
+      radius={r}
       pathOptions={{
-        color: selected ? '#111827' : '#ffffff',
-        weight: selected ? 1.5 : 0.6,
-        fillColor,
-        fillOpacity: 1,
+        color: selected ? '#0f172a' : '#ffffff',
+        weight: selected ? 2.5 : 0.7,
+        fillColor: bucket.color,
+        fillOpacity: 0.95,
       }}
       bubblingMouseEvents={false}
       eventHandlers={{ click: () => onSelectProject(anomaly) }}
     >
       <Tooltip sticky>
-        {anomaly.contractId} · {anomaly.region}
-        <br />
-        {anomaly.description}
+        <span className="marker-tooltip-title">{anomaly.description}</span>
+        <span className="marker-tooltip-row">
+          {formatPesoCompact(anomaly.budget)}
+        </span>
+        <span className="marker-tooltip-row">
+          {formatMultiple(anomaly.median_multiple)} peer median
+        </span>
       </Tooltip>
     </CircleMarker>
   )
@@ -38,27 +49,32 @@ const MemoizedMarker = memo(FlaggedMarker)
  */
 export default function FlaggedMarkers({
   markers,
-  summary,
   selectedContractId,
   onSelectProject,
 }) {
-  const maxShare = maxFlaggedShare(summary)
+  const maxRatio = maxRatioOf(markers)
 
-  const regionRows = new Map()
-  for (const row of summary?.regions ?? []) {
-    regionRows.set(row.region, row)
+  return markers.map((anomaly) => (
+    <MemoizedMarker
+      key={anomaly.contractId}
+      anomaly={anomaly}
+      radius={markerRadiusForRatio(anomaly.median_multiple, maxRatio)}
+      selected={anomaly.contractId === selectedContractId}
+      onSelectProject={onSelectProject}
+    />
+  ))
+}
+
+/** The largest ratio among the markers currently drawn, for radius scaling. */
+function maxRatioOf(markers) {
+  let max = 0
+  for (const marker of markers ?? []) {
+    if (
+      Number.isFinite(marker.median_multiple) &&
+      marker.median_multiple > max
+    ) {
+      max = marker.median_multiple
+    }
   }
-
-  return markers.map((anomaly) => {
-    const row = regionRows.get(anomaly.region)
-    return (
-      <MemoizedMarker
-        key={anomaly.contractId}
-        anomaly={anomaly}
-        fillColor={colorForFlaggedShare(row?.flagged_percentage, maxShare)}
-        selected={anomaly.contractId === selectedContractId}
-        onSelectProject={onSelectProject}
-      />
-    )
-  })
+  return max
 }

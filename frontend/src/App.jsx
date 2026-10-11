@@ -63,6 +63,11 @@ export default function App() {
     }
   }
 
+  const handleResetView = () => {
+    setSelected(null)
+    setSelectedRegion(null)
+  }
+
   // The dots drawn on the map: valid-coordinate flagged projects, scoped to
   // the selected region (or all of them when no region is chosen).
   const markers = useMemo(
@@ -98,6 +103,7 @@ export default function App() {
             markers={markers}
             selected={selected}
             onSelectProject={handleSelectProject}
+            onReset={handleResetView}
           />
           <MapCoverageNote summary={!summary?.error ? summary : null} />
           <RegionSelector
