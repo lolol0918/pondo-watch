@@ -184,7 +184,7 @@ export default function RegionMap({
         </span>
       </div>
 
-      <div className="map-coords-chip">
+      <div className="map-coords-chip" aria-live="polite">
         {formatInteger(mappedCount ?? 0)} mapped, {formatInteger(withoutCount ?? 0)} flagged
         projects have no coordinates
       </div>
