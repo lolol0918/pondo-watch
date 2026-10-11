@@ -40,12 +40,14 @@ export default function RegionMap({
 }) {
   const [geo, setGeo] = useState(null)
   const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   const psgcLookup = useMemo(() => buildPsgcLookup(summary), [summary])
   const selectedRow = findRowByLabel(summary, selectedRegion)
 
   useEffect(() => {
     let cancelled = false
+    setLoadError(false)
     fetch(GEOJSON_URL)
       .then((response) => {
         if (!response.ok) {
@@ -66,7 +68,7 @@ export default function RegionMap({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reloadKey])
 
   const maxShare = useMemo(() => maxFlaggedShare(summary), [summary])
 
@@ -105,7 +107,16 @@ export default function RegionMap({
   return (
     <div className="map-wrap">
       {loadError ? (
-        <div className="map-error">Map boundaries failed to load.</div>
+        <div className="map-error" role="alert">
+          <p>Map boundaries failed to load.</p>
+          <button
+            type="button"
+            className="retry"
+            onClick={() => setReloadKey((key) => key + 1)}
+          >
+            Try again
+          </button>
+        </div>
       ) : (
         // preferCanvas renders all vectors (polygons and the flagged-project
         // dots) on Leaflet canvas layers, which keeps thousands of markers
@@ -145,6 +156,11 @@ export default function RegionMap({
           />
         </MapContainer>
       )}
+      {!geo && !loadError ? (
+        <div className="map-loading" role="status" aria-live="polite">
+          Loading region boundaries…
+        </div>
+      ) : null}
       <div className="map-legend" aria-label="Map legend">
         <div className="legend-block">
           <span className="legend-block-title">Region fill — flagged share</span>

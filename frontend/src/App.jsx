@@ -20,6 +20,7 @@ export default function App() {
   const [summary, setSummary] = useState(null)
   const [anomalies, setAnomalies] = useState(null)
   const [anomaliesError, setAnomaliesError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [selectedRegion, setSelectedRegion] = useState(initialUrl.region) // null = all
   const [selected, setSelected] = useState(null) // anomaly record
   const [pendingProjectId, setPendingProjectId] = useState(initialUrl.project)
@@ -32,17 +33,16 @@ export default function App() {
   })
 
   useEffect(() => {
+    setSummary(null)
     loadRegionSummary()
       .then(setSummary)
-      .catch(() => {
-        setAnomaliesError(true)
-        setSummary({ error: true })
-      })
-  }, [])
+      .catch(() => setSummary({ error: true }))
+  }, [reloadKey])
 
   // Fetch the flagged list in the background so cards + map paint first.
   useEffect(() => {
     let cancelled = false
+    setAnomaliesError(false)
     loadAnomalies()
       .then((data) => {
         if (!cancelled) {
@@ -57,7 +57,9 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reloadKey])
+
+  const retry = () => setReloadKey((key) => key + 1)
 
   // Restore a project from the URL once the list has loaded.
   useEffect(() => {
@@ -172,9 +174,15 @@ export default function App() {
         <section className="results-pane">
           {summary?.error ? (
             <div className="load-error" role="alert">
-              Failed to load the region summary. Run{' '}
-              <code>.venv/bin/python -m pipeline.export_json</code> from the
-              repository root and restart the dev server.
+              <p>Region summary failed to load.</p>
+              <p className="load-error-hint">
+                If you are running this locally, generate the data with{' '}
+                <code>.venv/bin/python -m pipeline.export_json</code> from the
+                repository root.
+              </p>
+              <button type="button" className="retry" onClick={retry}>
+                Try again
+              </button>
             </div>
           ) : (
             <>
@@ -195,7 +203,10 @@ export default function App() {
           )}
           {anomaliesError ? (
             <div className="load-error" role="alert">
-              Flagged projects failed to load.
+              <p>Flagged projects failed to load.</p>
+              <button type="button" className="retry" onClick={retry}>
+                Try again
+              </button>
             </div>
           ) : null}
         </section>
