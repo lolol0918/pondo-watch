@@ -46,8 +46,9 @@ describe('formatInteger / formatPercent / formatMultiple / formatZScore', () => 
     expect(formatPercent(null)).toBe('—')
   })
 
-  it('formats median multiples with an × sign', () => {
-    expect(formatMultiple(381.5068938249917)).toBe('381.507×')
+  it('formats median multiples with an × sign to one decimal', () => {
+    expect(formatMultiple(381.5068938249917)).toBe('381.5×')
+    expect(formatMultiple(12.96)).toBe('13×')
     expect(formatMultiple(1.0)).toBe('1×')
   })
 

@@ -353,13 +353,29 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  margin-top: 6px;
+  margin-top: 8px;
   min-width: 0;
   font-size: 0.85rem;
 }
 
+.flagged-item-stat {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .flagged-item-budget {
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .flagged-item-multiple {

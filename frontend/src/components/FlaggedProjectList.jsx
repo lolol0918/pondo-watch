@@ -78,14 +78,26 @@ export default function FlaggedProjectList({
                   {a.contractId} · {a.category} · {a.region} · {a.infraYear}
                 </span>
                 <span className="flagged-item-stats">
-                  <span className="flagged-item-budget">
-                    {formatPesoCompact(a.budget)}
+                  <span className="flagged-item-stat">
+                    <span className="stat-label">budget</span>
+                    <span className="flagged-item-budget">
+                      {formatPesoCompact(a.budget)}
+                    </span>
                   </span>
-                  <span className="flagged-item-multiple">
-                    {formatMultiple(a.median_multiple)} median
+                  <span className="flagged-item-stat">
+                    <span className="stat-label">vs. peer median</span>
+                    <span className="flagged-item-multiple">
+                      {formatMultiple(a.median_multiple)}
+                    </span>
                   </span>
-                  <span className="flagged-item-score">
-                    {formatZScore(a.anomaly_score)}
+                  <span
+                    className="flagged-item-stat"
+                    title="Modified z-score: how far above the peer-group median this budget sits, in robust σ-equivalents."
+                  >
+                    <span className="stat-label">modified z</span>
+                    <span className="flagged-item-score">
+                      {formatZScore(a.anomaly_score)}
+                    </span>
                   </span>
                 </span>
               </button>

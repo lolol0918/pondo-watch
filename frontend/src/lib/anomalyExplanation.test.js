@@ -24,7 +24,7 @@ describe('buildExplanation', () => {
   it('contains the budget, multiple, group size, region and year', () => {
     const text = buildExplanation(record)
     expect(text).toContain('₱1.75B')
-    expect(text).toContain('381.507×')
+    expect(text).toContain('381.5×')
     expect(text).toContain('68')
     expect(text).toContain('Region XI')
     expect(text).toContain('(2021)')

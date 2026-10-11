@@ -52,12 +52,13 @@ export function formatPercent(value) {
   return `${value.toFixed(1)}%`
 }
 
-/** Median multiple, e.g. 381.506 -> "381.5×". */
+/** Median multiple, e.g. 381.506 -> "381.5×". One decimal keeps the
+ * row/panel numbers compact and readable at a glance. */
 export function formatMultiple(value) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '—'
   }
-  return `${trimmed(value, 3)}×`
+  return `${trimmed(value, 1)}×`
 }
 
 /**
