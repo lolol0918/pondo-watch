@@ -98,30 +98,33 @@ export default function App() {
       <main className="app-main">
         <SummaryCards summary={!summary?.error ? summary : null} />
 
-        <section className="map-section">
-          <MarkerCoordinateStatus
-            anomalies={anomalies}
-            markers={markers}
-            selectedRegion={selectedRegion}
-          />
-          <RegionMap
-            summary={!summary?.error ? summary : null}
-            selectedRegion={selectedRegion}
-            onSelectRegion={handleSelectRegion}
-            markers={markers}
-            selected={selected}
-            onSelectProject={handleSelectProject}
-            onReset={handleResetView}
-          />
-          <MapCoverageNote summary={!summary?.error ? summary : null} />
-          <RegionSelector
-            summary={!summary?.error ? summary : null}
-            selectedRegion={selectedRegion}
-            onChange={handleSelectRegion}
-          />
-        </section>
+        <div className="dashboard">
+          <section className="map-pane">
+            <MarkerCoordinateStatus
+              anomalies={anomalies}
+              markers={markers}
+              selectedRegion={selectedRegion}
+            />
+            <RegionSelector
+              summary={!summary?.error ? summary : null}
+              selectedRegion={selectedRegion}
+              onChange={handleSelectRegion}
+            />
+            <div className="map-sticky">
+              <RegionMap
+                summary={!summary?.error ? summary : null}
+                selectedRegion={selectedRegion}
+                onSelectRegion={handleSelectRegion}
+                markers={markers}
+                selected={selected}
+                onSelectProject={handleSelectProject}
+                onReset={handleResetView}
+              />
+              <MapCoverageNote summary={!summary?.error ? summary : null} />
+            </div>
+          </section>
 
-        <section className="results-grid">
+        <section className="results-pane">
           {summary?.error ? (
             <div className="load-error" role="alert">
               Failed to load the region summary. Run{' '}
@@ -151,6 +154,7 @@ export default function App() {
             </div>
           ) : null}
         </section>
+        </div>
       </main>
 
       <footer className="app-footer">
