@@ -27,6 +27,8 @@ data/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+# Temporary headless-browser verification scripts
+frontend/.verify*.mjs
 # Generated copies of pipeline outputs (copied by frontend/scripts/copy-data.mjs).
 # Vendored map boundaries under frontend/public/geo/ are committed on purpose.
 frontend/public/data/

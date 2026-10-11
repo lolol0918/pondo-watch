@@ -12,6 +12,7 @@ import MarkerCoordinateStatus from './components/MarkerCoordinateStatus.jsx'
 import RegionMap from './components/RegionMap.jsx'
 import RegionSelector, { ALL_REGIONS } from './components/RegionSelector.jsx'
 import SummaryCards from './components/SummaryCards.jsx'
+import { DEFAULT_SORT } from './lib/listFilters.js'
 import { withCoordinates } from './lib/markers.js'
 
 export default function App() {
@@ -20,6 +21,13 @@ export default function App() {
   const [anomaliesError, setAnomaliesError] = useState(false)
   const [selectedRegion, setSelectedRegion] = useState(null) // null = all
   const [selected, setSelected] = useState(null) // anomaly record
+  const [filters, setFilters] = useState({
+    sort: DEFAULT_SORT,
+    query: '',
+    category: '',
+    year: '',
+    minRatio: '',
+  })
 
   useEffect(() => {
     loadRegionSummary()
@@ -125,6 +133,9 @@ export default function App() {
               <FlaggedProjectList
                 anomalies={anomalies}
                 selectedRegion={selectedRegion}
+                filters={filters}
+                onFiltersChange={setFilters}
+                onChangeRegion={handleSelectRegion}
                 selectedContractId={selected?.contractId ?? null}
                 onSelectProject={handleSelectProject}
               />
