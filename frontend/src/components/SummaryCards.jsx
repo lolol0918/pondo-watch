@@ -22,12 +22,18 @@ export default function SummaryCards({ summary }) {
   }
 
   const totals = summary.totals
+  // The pipeline's exported `flagged_percentage` is flagged / all projects.
+  // Here we derive the share over the eligible population — the projects that
+  // could actually be compared — so the denominator matches the caption.
+  const eligible = totals.eligible ?? 0
+  const flaggedShareOfEligible =
+    eligible > 0 ? (100 * totals.flagged) / eligible : 0
   return (
     <div className="summary-cards">
       <Card
         label="Total projects"
         value={formatInteger(totals.projects)}
-        caption={`${formatInteger(totals.eligible)} eligible for cost analysis`}
+        caption={`${formatInteger(eligible)} eligible for cost analysis`}
       />
       <Card
         label="Flagged projects"
@@ -36,8 +42,8 @@ export default function SummaryCards({ summary }) {
       />
       <Card
         label="Flagged share"
-        value={formatPercent(totals.flagged_percentage)}
-        caption="of all projects"
+        value={formatPercent(flaggedShareOfEligible)}
+        caption={`of ${formatInteger(eligible)} eligible for cost analysis`}
       />
     </div>
   )
