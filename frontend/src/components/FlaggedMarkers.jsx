@@ -13,14 +13,16 @@ import {
 // falls through to the region polygon below it.
 function FlaggedMarker({ anomaly, radius, selected, onSelectProject }) {
   const bucket = severityForRatio(anomaly.median_multiple)
-  const r = selected ? radius + 2.5 : radius
+  // The selected marker grows slightly and gains a dark ring so the choice is
+  // never signalled by colour alone.
+  const r = selected ? radius + 3 : radius
   return (
     <CircleMarker
       center={[anomaly.latitude, anomaly.longitude]}
       radius={r}
       pathOptions={{
         color: selected ? '#0f172a' : '#ffffff',
-        weight: selected ? 2.5 : 0.7,
+        weight: selected ? 3 : 0.7,
         fillColor: bucket.color,
         fillOpacity: 0.95,
       }}

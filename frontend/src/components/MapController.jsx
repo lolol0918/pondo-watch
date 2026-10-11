@@ -76,12 +76,18 @@ export default function MapController({
   selectedRegion,
   selected,
   markers,
+  flyToSelected,
   onReset,
 }) {
   const map = useMap()
 
-  // Fly to the selected project when it has plotable coordinates.
+  // Fly to the selected project only when the selection came from the list
+  // (a row click); clicking a marker selects it without moving the map. Never
+  // below zoom 10, and instant under prefers-reduced-motion.
   useEffect(() => {
+    if (!flyToSelected) {
+      return
+    }
     if (selected && isValidCoordinate(selected.latitude, selected.longitude)) {
       const target = [selected.latitude, selected.longitude]
       const zoom = Math.max(map.getZoom(), 10)
@@ -91,7 +97,7 @@ export default function MapController({
         map.flyTo(target, zoom, { duration: 0.6 })
       }
     }
-  }, [selected, map])
+  }, [flyToSelected, selected, map])
 
   // Zoom to the selected region's boundary, or its flagged-project extent.
   useEffect(() => {

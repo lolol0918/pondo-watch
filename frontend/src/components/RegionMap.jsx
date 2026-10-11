@@ -34,7 +34,10 @@ export default function RegionMap({
   selectedRegion,
   onSelectRegion,
   markers,
+  mappedCount,
+  withoutCount,
   selected,
+  selectionSource,
   onSelectProject,
   onReset,
 }) {
@@ -91,12 +94,13 @@ export default function RegionMap({
 
     layer.bindTooltip(
       row
-        ? `${label} — ${formatInteger(row.projects)} projects, ` +
-          `${formatInteger(row.flagged)} flagged (${formatPercent(row.flagged_percentage)})`
+        ? `${label} — ${formatPieces(row)}`
         : `${label} — no matching projects in dataset`,
       { sticky: true },
     )
 
+    // Clicking a region sets the Region filter — the same single source of
+    // truth the list and markers read from.
     layer.on('click', () => {
       if (row) {
         onSelectRegion(row.region)
@@ -136,19 +140,14 @@ export default function RegionMap({
         >
           {geo ? (
             <>
-              <GeoJSON
-                data={geo}
-                style={styleFor}
-                onEachFeature={onEachFeature}
-              />
+              <GeoJSON data={geo} style={styleFor} onEachFeature={onEachFeature} />
               <FitToData data={geo} />
             </>
           ) : null}
           <FlaggedMarkers
             markers={markers}
-            summary={summary}
             selectedContractId={selected?.contractId ?? null}
-            onSelectProject={onSelectProject}
+            onSelectProject={(anomaly) => onSelectProject(anomaly, 'map')}
           />
           <MapController
             geo={geo}
@@ -156,49 +155,47 @@ export default function RegionMap({
             selectedRegion={selectedRegion}
             selected={selected}
             markers={markers}
+            flyToSelected={selectionSource === 'list'}
             onReset={onReset}
           />
         </MapContainer>
       )}
+
       {!geo && !loadError ? (
         <div className="map-loading" role="status" aria-live="polite">
           Loading region boundaries…
         </div>
       ) : null}
-      <div className="map-legend" aria-label="Map legend">
-        <div className="legend-block">
-          <span className="legend-block-title">Region fill — flagged share</span>
-          <span className="legend-row">
-            <span className="legend-end">Low</span>
-            <span className="legend-gradient" />
-            <span className="legend-end">High</span>
-          </span>
-        </div>
-        <div className="legend-block">
-          <span className="legend-block-title">
-            Markers — budget vs. peer median
-          </span>
-          <span className="legend-buckets">
-            {SEVERITY_BUCKETS.map((bucket) => (
-              <span className="legend-bucket" key={bucket.key}>
-                <span
-                  className="legend-dot"
-                  style={{ backgroundColor: bucket.color }}
-                />
-                {bucket.label}
-              </span>
-            ))}
-          </span>
-          <span className="legend-row legend-sizes">
-            <span className="legend-size">
-              <span className="legend-dot legend-dot-small" /> near median
-            </span>
-            <span className="legend-size">
-              <span className="legend-dot legend-dot-large" /> far above
-            </span>
-          </span>
-        </div>
+
+      {/* Compact corner card. It is static (never expands over the map), so it
+          can't grow past a couple of percent of the map area; the detailed key
+          lives in "About this map" below. */}
+      <div className="map-legend" role="note" aria-label="Map legend">
+        <span className="map-legend-title">Dot size &amp; colour = budget vs peers</span>
+        <span className="map-legend-mini" aria-hidden="true">
+          {SEVERITY_BUCKETS.map((bucket) => (
+            <span
+              className="legend-dot"
+              key={bucket.key}
+              style={{ backgroundColor: bucket.color }}
+            />
+          ))}
+          <span className="legend-gradient" />
+        </span>
+      </div>
+
+      <div className="map-coords-chip">
+        {formatInteger(mappedCount ?? 0)} mapped, {formatInteger(withoutCount ?? 0)} flagged
+        projects have no coordinates
       </div>
     </div>
+  )
+}
+
+function formatPieces(row) {
+  return (
+    `${formatInteger(row.projects)} projects, ` +
+    `${formatInteger(row.flagged)} flagged ` +
+    `(${formatPercent(row.flagged_percentage)})`
   )
 }
