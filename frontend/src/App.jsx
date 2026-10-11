@@ -12,21 +12,23 @@ import MarkerCoordinateStatus from './components/MarkerCoordinateStatus.jsx'
 import RegionMap from './components/RegionMap.jsx'
 import RegionSelector, { ALL_REGIONS } from './components/RegionSelector.jsx'
 import SummaryCards from './components/SummaryCards.jsx'
-import { DEFAULT_SORT } from './lib/listFilters.js'
 import { withCoordinates } from './lib/markers.js'
+import { readUrlState, useUrlPopState, useUrlSync } from './lib/urlState.js'
 
 export default function App() {
+  const initialUrl = useMemo(() => readUrlState(window.location.search), [])
   const [summary, setSummary] = useState(null)
   const [anomalies, setAnomalies] = useState(null)
   const [anomaliesError, setAnomaliesError] = useState(false)
-  const [selectedRegion, setSelectedRegion] = useState(null) // null = all
+  const [selectedRegion, setSelectedRegion] = useState(initialUrl.region) // null = all
   const [selected, setSelected] = useState(null) // anomaly record
+  const [pendingProjectId, setPendingProjectId] = useState(initialUrl.project)
   const [filters, setFilters] = useState({
-    sort: DEFAULT_SORT,
-    query: '',
-    category: '',
-    year: '',
-    minRatio: '',
+    sort: initialUrl.sort,
+    query: initialUrl.query,
+    category: initialUrl.category,
+    year: initialUrl.year,
+    minRatio: initialUrl.minRatio,
   })
 
   useEffect(() => {
@@ -56,6 +58,49 @@ export default function App() {
       cancelled = true
     }
   }, [])
+
+  // Restore a project from the URL once the list has loaded.
+  useEffect(() => {
+    if (!anomalies || !pendingProjectId) {
+      return
+    }
+    const record = anomalies.find((a) => a.contractId === pendingProjectId)
+    if (record) {
+      setSelected(record)
+      if (record.region) {
+        setSelectedRegion(record.region)
+      }
+    }
+    setPendingProjectId(null)
+  }, [anomalies, pendingProjectId])
+
+  // Keep the address bar in step with the dashboard, and re-apply state on
+  // back/forward navigation.
+  useUrlSync({
+    region: selectedRegion,
+    project: selected?.contractId ?? pendingProjectId ?? null,
+    query: filters.query,
+    category: filters.category,
+    year: filters.year,
+    minRatio: filters.minRatio,
+    sort: filters.sort,
+  })
+
+  useUrlPopState((url) => {
+    setSelectedRegion(url.region)
+    setFilters({
+      sort: url.sort,
+      query: url.query,
+      category: url.category,
+      year: url.year,
+      minRatio: url.minRatio,
+    })
+    if (url.project) {
+      setPendingProjectId(url.project)
+    } else {
+      setSelected(null)
+    }
+  })
 
   const handleSelectRegion = (label) => {
     setSelectedRegion(label === ALL_REGIONS ? null : label)
