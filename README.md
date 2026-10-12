@@ -15,8 +15,8 @@ score — so a reader can judge the numbers for themselves.
 > harder site conditions, bundled/program-level work) can legitimately explain
 > a high multiple. Projects are matched only on category, region and year.
 
-<!-- SCREENSHOT PLACEHOLDER — replace the src with a real capture and delete this comment. -->
-![Pondo Watch dashboard](docs/screenshot.png)
+
+![Pondo Watch dashboard](./frontend/public/screenshots/dashboard.png)
 
 ## What it does
 
