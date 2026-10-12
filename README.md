@@ -154,6 +154,32 @@ npm run preview    # serve the production build locally
 npm test           # frontend unit tests (vitest)
 ```
 
+## Deploying on Vercel
+
+Pondo Watch deploys as a static site. The browser only ever loads the compact
+`region_summary.json` and the flagged-project `cost_anomalies.json`, so those
+two **generated** files are committed under `frontend/public/data/` — that is
+what lets Vercel build straight from Git without running the Python pipeline
+(which needs the git-ignored raw dataset). The raw and intermediate files under
+`data/` remain ignored, and the ~134 MB `projects.json` is never copied.
+
+`frontend/scripts/copy-data.mjs` regenerates the committed copies from
+`data/processed/` whenever the pipeline is present locally; when it is not (as
+on Vercel) it keeps the committed copies and the build proceeds.
+
+To deploy:
+
+1. Create a Vercel project and set its **Root Directory** to `frontend`
+   (there is no root `package.json`; `frontend/vercel.json` sets the output
+   directory). The Vite preset installs deps and runs `npm run build`.
+2. Run the pipeline locally (`python -m pipeline.export_json`), then
+   `cd frontend && npm run build` to refresh `frontend/public/data/`, and
+   commit those two files. That refresh is the "data update" step — push it and
+   Vercel redeploys.
+
+Pipeline output is not produced on Vercel, so keep the committed copies in sync
+by rebuilding them whenever the data changes.
+
 ## Screenshot
 
 The placeholder above (`docs/screenshot.png`) should be replaced with a capture

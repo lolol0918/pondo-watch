@@ -21,7 +21,7 @@ env/
 
 # Data
 *.parquet
-data/
+/data/
 !data/.gitkeep
 
 # Frontend
@@ -30,8 +30,12 @@ frontend/dist/
 # Temporary headless-browser verification scripts
 frontend/.verify*.mjs
 # Generated copies of pipeline outputs (copied by frontend/scripts/copy-data.mjs).
-# Vendored map boundaries under frontend/public/geo/ are committed on purpose.
-frontend/public/data/
+# The two files the browser actually serves are committed so Vercel can deploy
+# from Git without running the Python pipeline. The raw and intermediate
+# pipeline outputs under data/ stay ignored; projects.json is never served.
+frontend/public/data/*
+!frontend/public/data/region_summary.json
+!frontend/public/data/cost_anomalies.json
 
 # IDE / OS
 .vscode/
