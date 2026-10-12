@@ -93,14 +93,27 @@ frontend/public/data/{region_summary,cost_anomalies}.json
 The large `projects.json` is intentionally **not** copied into the browser
 bundle; only the compact summary and the flagged-project export are served.
 
+## Data Source
+
+Pondo Watch uses the
+[DPWH Transparency Dataset](https://huggingface.co/datasets/bettergovph/dpwh-transparency-data),
+published on Hugging Face by
+[bettergovph](https://huggingface.co/bettergovph).
+
+The dataset contains public infrastructure project records from the Department
+of Public Works and Highways (DPWH).
+
+Note: The raw dataset is not included in this repository. Download it from the
+source and place it at `data/raw/dpwh_transparency_data.parquet` before running
+the data pipeline.
+
 ## Prerequisites
 
 - **Python** 3.11+ (developed on 3.14)
 - **Node.js** 20+ and npm (developed on Node 22)
-- The raw dataset at `data/raw/dpwh_transparency_data.parquet`, available from
-  the [`bettergovph/dpwh-transparency-data`](https://huggingface.co/datasets/bettergovph/dpwh-transparency-data)
-  dataset on Hugging Face (the pipeline does not download it; supply the file
-  yourself)
+- The raw dataset at `data/raw/dpwh_transparency_data.parquet` — see
+  [Data Source](#data-source). The pipeline does not download it; supply the
+  file yourself.
 
 ## Build & run
 
